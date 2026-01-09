@@ -109,9 +109,7 @@ export async function fetchKeywordRanking(): Promise<KeywordRanking[]> {
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getTrendApiHeaders(),
     });
 
     if (!response.ok) {
@@ -158,9 +156,7 @@ export async function searchSuggestions(query: string): Promise<SearchSuggestion
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getSearchApiHeaders(),
     });
 
     if (!response.ok) {
@@ -276,7 +272,7 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
     return { total: 0, items: [], page: 1, pageSize };
   }
 
-  const url = `${SEARCH_API_BASE_URL}/articles/search?query=${encodeURIComponent(query.trim())}&page=${page}&pageSize=${pageSize}`;
+  const url = `${SEARCH_API_BASE_URL}/articles/search?query=${encodeURIComponent(query.trim())}&page=${page}&size=${pageSize}`;
   
   if (import.meta.env.DEV) {
     console.log('검색 결과 API 호출:', url);
@@ -285,9 +281,7 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getSearchApiHeaders(),
     });
 
     if (!response.ok) {
@@ -317,7 +311,7 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
           category: item.category || '',
         })),
         page: data.page || page,
-        pageSize: data.pageSize || pageSize,
+        pageSize: data.size || pageSize,
       };
     }
     
