@@ -1,13 +1,102 @@
 import { KeywordRanking, SearchSuggestion, SearchResult, SearchResultResponse } from '@/types';
 
 // 개발 환경에서는 프록시를 통해 /api로 시작하는 경로 사용
-// 프로덕션에서는 환경변수나 직접 URL 사용
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.DEV ? '/api' : 'http://localhost:3002');
+// 프로덕션에서는 환경변수 필수 (Vercel 등 배포 환경에서 설정 필요)
+// 개발 환경에서는 환경 변수와 관계없이 프록시를 우선 사용
+function getApiBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  
+  // 프로덕션 환경에서는 환경 변수 필수
+  const url = import.meta.env.VITE_API_BASE_URL;
+  if (!url || url.trim() === '') {
+    throw new Error(
+      'VITE_API_BASE_URL 환경 변수가 설정되지 않았습니다.\n\n' +
+      'Vercel 환경 변수 설정 방법:\n' +
+      '1. Vercel 대시보드 > 프로젝트 선택 > Settings\n' +
+      '2. Environment Variables 클릭\n' +
+      '3. 다음 변수 추가:\n' +
+      '   - Key: VITE_API_BASE_URL\n' +
+      '   - Value: https://your-api-server.com (실제 백엔드 서버 URL)\n' +
+      '   - Environment: Production, Preview, Development 모두 선택\n' +
+      '4. 재배포 (Redeploy) 실행\n\n' +
+      '⚠️ 프로덕션 환경에서는 localhost를 사용할 수 없습니다.'
+    );
+  }
+  
+  // localhost 사용 방지
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    throw new Error(
+      `VITE_API_BASE_URL에 localhost가 포함되어 있습니다: ${url}\n\n` +
+      '프로덕션 환경에서는 실제 백엔드 서버 URL을 사용해야 합니다.\n' +
+      '예: https://api.yourdomain.com'
+    );
+  }
+  
+  return url;
+}
 
-// 검색 API는 별도 URL 사용
-const SEARCH_API_BASE_URL = import.meta.env.VITE_SEARCH_API_BASE_URL || 
-  (import.meta.env.DEV ? '/search-api' : 'http://localhost:3001');
+function getSearchApiBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return '/search-api';
+  }
+  
+  // 프로덕션 환경에서는 환경 변수 필수
+  const url = import.meta.env.VITE_SEARCH_API_BASE_URL;
+  if (!url || url.trim() === '') {
+    throw new Error(
+      'VITE_SEARCH_API_BASE_URL 환경 변수가 설정되지 않았습니다.\n\n' +
+      'Vercel 환경 변수 설정 방법:\n' +
+      '1. Vercel 대시보드 > 프로젝트 선택 > Settings\n' +
+      '2. Environment Variables 클릭\n' +
+      '3. 다음 변수 추가:\n' +
+      '   - Key: VITE_SEARCH_API_BASE_URL\n' +
+      '   - Value: https://your-search-api-server.com (실제 검색 API 서버 URL)\n' +
+      '   - Environment: Production, Preview, Development 모두 선택\n' +
+      '4. 재배포 (Redeploy) 실행\n\n' +
+      '⚠️ 프로덕션 환경에서는 localhost를 사용할 수 없습니다.'
+    );
+  }
+  
+  // localhost 사용 방지
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    throw new Error(
+      `VITE_SEARCH_API_BASE_URL에 localhost가 포함되어 있습니다: ${url}\n\n` +
+      '프로덕션 환경에서는 실제 검색 API 서버 URL을 사용해야 합니다.\n' +
+      '예: https://search-api.yourdomain.com'
+    );
+  }
+  
+  return url;
+}
+
+const API_BASE_URL = getApiBaseUrl();
+const SEARCH_API_BASE_URL = getSearchApiBaseUrl();
+
+// Admin API Key (환경 변수에서 읽어옴, 트렌드 API에만 사용)
+const ADMIN_API_KEY = import.meta.env.VITE_ADMIN_API_KEY || '';
+
+// 트렌드 API용 헤더 (Admin API Key 포함)
+function getTrendApiHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Admin API Key가 설정되어 있으면 헤더에 추가
+  if (ADMIN_API_KEY) {
+    headers['X-API-Key'] = ADMIN_API_KEY;
+  }
+  
+  return headers;
+}
+
+// 검색 API용 헤더 (Admin API Key 제외)
+function getSearchApiHeaders(): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+  };
+}
 
 export async function fetchKeywordRanking(): Promise<KeywordRanking[]> {
   const url = `${API_BASE_URL}/trend/top`;
