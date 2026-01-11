@@ -1,3 +1,5 @@
+import Logo from '@/components/Logo';
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -7,13 +9,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* 브랜드 섹션 */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-tr from-teal-500 to-emerald-400 rounded-lg flex items-center justify-center shadow-lg shadow-teal-200">
-                <i className="ri-flashlight-fill text-white text-xl"></i>
-              </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-emerald-600">
-                TREN:D LAB
-              </span>
+            <div className="mb-4">
+              <Logo size="md" />
             </div>
             <p className="text-slate-600 text-sm mb-4 max-w-md">
               실시간 뉴스 트렌드를 분석하고 키워드 랭킹을 제공하여 최신 이슈를 한눈에 파악할 수 있는 서비스입니다.
