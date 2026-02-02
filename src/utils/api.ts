@@ -361,13 +361,15 @@ function getDataReportApiBaseUrl(): string {
     // 개발 환경에서는 localhost:3002 직접 사용 (프록시 설정 필요 시 vite.config.ts 수정)
     return 'http://localhost:3002';
   }
-  
+
+  // 운영 환경: 우선 전용 ENV가 있으면 사용, 없으면 기존 트렌드 API BASE URL 재사용
   const url = import.meta.env.VITE_DATA_REPORT_API_BASE_URL;
-  if (!url || url.trim() === '') {
-    throw new Error('VITE_DATA_REPORT_API_BASE_URL 환경 변수가 설정되지 않았습니다.');
+  if (url && url.trim() !== '') {
+    return url;
   }
-  
-  return url;
+
+  // 별도 환경 변수가 없으면 기존 트렌드 API BASE URL 사용
+  return getApiBaseUrl();
 }
 
 const DATA_REPORT_API_BASE_URL = getDataReportApiBaseUrl();
