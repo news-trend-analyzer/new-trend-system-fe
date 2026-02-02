@@ -324,3 +324,205 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
   }
 }
 
+// 데이터 리포트 API 타입 정의
+export interface DataReportRanking {
+  id: string;
+  displayText: string;
+  freqSum: string;
+  scoreSum: number;
+}
+
+export interface TimeSeriesData {
+  bucketTime: string;
+  freqSum: number;
+  scoreSum: number;
+}
+
+export interface RelatedArticle {
+  id: string;
+  publisher: string;
+  title: string;
+  url: string;
+  publishedAt: string;
+  weight: number;
+}
+
+export interface RelatedKeyword {
+  id: string;
+  displayText: string;
+  coCount: string;
+  weightSum: number;
+  associationScore: number;
+}
+
+// 데이터 리포트 API 함수들
+function getDataReportApiBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    // 개발 환경에서는 localhost:3002 직접 사용 (프록시 설정 필요 시 vite.config.ts 수정)
+    return 'http://localhost:3002';
+  }
+  
+  const url = import.meta.env.VITE_DATA_REPORT_API_BASE_URL;
+  if (!url || url.trim() === '') {
+    throw new Error('VITE_DATA_REPORT_API_BASE_URL 환경 변수가 설정되지 않았습니다.');
+  }
+  
+  return url;
+}
+
+const DATA_REPORT_API_BASE_URL = getDataReportApiBaseUrl();
+
+export async function fetchDataReportRanking(): Promise<DataReportRanking[]> {
+  const url = `${DATA_REPORT_API_BASE_URL}/data-report/ranking`;
+  
+  if (import.meta.env.DEV) {
+    console.log('데이터 리포트 랭킹 API 호출:', url);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`데이터 리포트 랭킹 API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('데이터 리포트 랭킹 API 호출 중 에러:', error);
+    }
+    throw error;
+  }
+}
+
+export async function fetchTimeSeries(keywordId: string, limit?: number): Promise<TimeSeriesData[]> {
+  const url = limit 
+    ? `${DATA_REPORT_API_BASE_URL}/data-report/time-series?keywordId=${keywordId}&limit=${limit}`
+    : `${DATA_REPORT_API_BASE_URL}/data-report/time-series?keywordId=${keywordId}`;
+  
+  if (import.meta.env.DEV) {
+    console.log('시계열 데이터 API 호출:', url);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`시계열 데이터 API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('시계열 데이터 API 호출 중 에러:', error);
+    }
+    throw error;
+  }
+}
+
+export async function fetchRelatedArticles(keywordId: string): Promise<RelatedArticle[]> {
+  const url = `${DATA_REPORT_API_BASE_URL}/data-report/related-articles?keywordId=${keywordId}`;
+  
+  if (import.meta.env.DEV) {
+    console.log('관련 기사 API 호출:', url);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`관련 기사 API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('관련 기사 API 호출 중 에러:', error);
+    }
+    throw error;
+  }
+}
+
+export async function fetchRelatedKeywords(keywordId: string): Promise<RelatedKeyword[]> {
+  const url = `${DATA_REPORT_API_BASE_URL}/data-report/related-keywords?keywordId=${keywordId}`;
+  
+  if (import.meta.env.DEV) {
+    console.log('관련 키워드 API 호출:', url);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`관련 키워드 API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('관련 키워드 API 호출 중 에러:', error);
+    }
+    throw error;
+  }
+}
+
+// 키워드 검색 API 타입 정의
+export interface SearchKeywordResult {
+  id: string;
+  displayText: string;
+}
+
+// 키워드 검색 API
+export async function searchKeyword(query: string, limit: number = 20): Promise<SearchKeywordResult[]> {
+  const url = `${DATA_REPORT_API_BASE_URL}/data-report/search-keyword?keyword=${encodeURIComponent(query)}&limit=${limit}`;
+  
+  if (import.meta.env.DEV) {
+    console.log('키워드 검색 API 호출:', url);
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`키워드 검색 API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('키워드 검색 API 호출 중 에러:', error);
+    }
+    throw error;
+  }
+}
+

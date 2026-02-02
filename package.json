@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "framer-motion": "^10.16.16",
+    "recharts": "^3.7.0",
     "remixicon": "^3.5.0"
   },
   "devDependencies": {

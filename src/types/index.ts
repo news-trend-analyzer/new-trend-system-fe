@@ -22,13 +22,17 @@ export interface TrendItem {
 }
 
 export interface KeywordRanking {
-  keyword: string;
-  totalScore: number;
-  recentScore: number;
-  trendScore: number;
+  id: string;
   rank: number;
-  rankChange?: number;
-  status: 'up' | 'down' | 'same';
+  keyword: string;
+  type: 'COMPOSITE' | 'SINGLE' | string;
+  status: 'new' | 'up' | 'down' | 'same';
+  rankChange: number;
+  score: number;        // 전체 점수
+  score24h: number;     // 최근 24시간 점수
+  scoreRecent: number;  // 가장 최근 구간 점수
+  scorePrev: number;    // 직전 구간 점수
+  diffScore: number;    // scoreRecent - scorePrev 등의 변화량
   articles?: string[];
 }
 

@@ -1,22 +1,32 @@
 import { useMemo } from 'react';
-import { Category, TrendItem } from '@/types';
+import { Category, TrendItem, KeywordRanking } from '@/types';
 import { useKeywordRanking } from './useKeywordRanking';
 
 function transformRankingsToTrendItems(
-  rankings: { keyword: string; totalScore: number; recentScore: number; trendScore: number; rank: number; status: 'up' | 'down' | 'same'; articles?: string[] }[],
+  rankings: KeywordRanking[],
   selectedCategory: Category
 ): TrendItem[] {
   // API 데이터를 TrendItem 형태로 변환
   const trendItems: TrendItem[] = rankings.map((ranking, index) => {
-    // 트렌드 데이터 생성 (recentScore와 trendScore를 활용)
+    // 점수 파생값 계산
+    const totalScore = ranking.score24h ?? ranking.score ?? 0;
+    const recentScore = ranking.scoreRecent ?? totalScore;
+    const prevScore =
+      ranking.scorePrev ?? (typeof ranking.diffScore === 'number' ? recentScore - ranking.diffScore : Math.max(0, recentScore * 0.7));
+
+    // 트렌드 데이터 생성 (이전 → 최근 → 전체 흐름)
     const trendData = [
-      Math.max(0, ranking.recentScore - ranking.trendScore * 2),
-      Math.max(0, ranking.recentScore - ranking.trendScore),
-      ranking.recentScore,
-      ranking.totalScore * 0.8,
-      ranking.totalScore * 0.9,
-      ranking.totalScore,
+      Math.max(0, prevScore),
+      Math.max(0, (prevScore + recentScore) / 2),
+      Math.max(0, recentScore),
+      Math.max(0, totalScore * 0.8),
+      Math.max(0, totalScore * 0.9),
+      Math.max(0, totalScore),
     ];
+
+    // 상태 매핑: 백엔드의 'new'를 프론트의 'up'으로 표시
+    const mappedStatus: 'up' | 'down' | 'same' =
+      ranking.status === 'down' ? 'down' : ranking.status === 'same' ? 'same' : 'up';
 
     // 첫 번째 기사 제목을 키워드로 사용 (없으면 원래 keyword 사용)
     const displayKeyword = ranking.articles && ranking.articles.length > 0 
@@ -39,8 +49,8 @@ function transformRankingsToTrendItems(
       keyword: displayKeyword, // 첫 번째 기사 제목을 키워드로 사용
       originalKeyword: ranking.keyword, // 원래 키워드 저장 (검색용)
       category: '전체' as Category, // API에 카테고리 정보가 없으므로 기본값
-      description: `${ranking.keyword} 키워드는 현재 총점 ${ranking.totalScore.toFixed(1)}점으로 많은 관심을 받고 있는 키워드입니다.`,
-      status: ranking.status, // API에서 받은 status 사용
+      description: `${ranking.keyword} 키워드는 현재 최근 24시간 기준 ${totalScore.toFixed(1)}점으로 많은 관심을 받고 있는 키워드입니다.`,
+      status: mappedStatus,
       trendData,
       articles,
     };
