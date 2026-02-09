@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "framer-motion": "^10.16.16",
+    "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0",
     "remixicon": "^3.5.0"
   },
