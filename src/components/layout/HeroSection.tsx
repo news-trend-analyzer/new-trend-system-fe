@@ -117,7 +117,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
   return (
     <section className="bg-gradient-to-b from-white to-slate-50 pt-16 pb-12">
       <div className="max-w-4xl mx-auto px-4 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6">
           지금 대한민국에서 <br/>
           <span className="text-teal-500">가장 뜨거운 트렌드</span>를 만나보세요
         </h1>
@@ -147,7 +147,6 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               <i className="ri-search-line"></i>
             </button>
           </div>
-          
           {/* 자동완성 드롭다운 */}
           {(showSuggestions || isLoading) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-80 overflow-y-auto z-50">
