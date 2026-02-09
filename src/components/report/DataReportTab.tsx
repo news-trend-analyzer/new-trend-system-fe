@@ -262,7 +262,7 @@ export default function DataReportTab() {
             
             return {
               rank: index + 1,
-              keyword: item.displayText,
+              keyword: item.normalizedText,
               id: item.id,
               score: score,
               change: change,
@@ -322,7 +322,7 @@ export default function DataReportTab() {
         if (searchResults && searchResults.length > 0) {
           // API 결과를 자동완성 형태로 변환
           const apiSuggestions = searchResults.map(result => ({
-            keyword: result.displayText,
+            keyword: result.normalizedText,
             id: result.id,
           }));
           setSuggestions(apiSuggestions);
@@ -390,7 +390,7 @@ export default function DataReportTab() {
           ? updatedTimeSeries.map(ts => ts.scoreSum)
           : keywordData.trendData;
         
-        const relatedKeywordsList = relatedKeywords.map(rk => rk.displayText);
+        const relatedKeywordsList = relatedKeywords.map(rk => rk.normalizedText);
         const articlesList: Article[] = articles.map(article => ({
           title: article.title,
           source: article.publisher,
@@ -431,7 +431,7 @@ export default function DataReportTab() {
         : keywordData.trendData;
       
       // 관련 키워드 변환
-      const relatedKeywordsList = relatedKeywords.map(rk => rk.displayText);
+      const relatedKeywordsList = relatedKeywords.map(rk => rk.normalizedText);
       
       // 관련 기사 변환
       const articlesList: Article[] = articles.map(article => ({
@@ -508,13 +508,13 @@ export default function DataReportTab() {
         const keywordData: KeywordData = {
           id: firstResult.id,
           rank: 0, // 검색 결과는 랭킹에 없을 수 있음
-          keyword: firstResult.displayText,
+          keyword: firstResult.normalizedText,
           score: score,
           change: change,
           status: change > 0 ? 'up' as const : change < 0 ? 'down' as const : 'same' as const,
           trendData: trendData.length > 0 ? trendData : [score],
           timeSeriesData: timeSeriesReversed.length > 0 ? timeSeriesReversed : undefined,
-          relatedKeywords: relatedKeywords.map(rk => rk.displayText),
+          relatedKeywords: relatedKeywords.map(rk => rk.normalizedText),
           articles: articles.map(article => ({
             title: article.title,
             source: article.publisher,
@@ -543,7 +543,7 @@ export default function DataReportTab() {
             return {
               id: result.id,
               rank: 0,
-              keyword: result.displayText,
+              keyword: result.normalizedText,
               score: trendData.length > 0 ? trendData[trendData.length - 1] : 0,
               change: 0,
               status: 'same' as const,
@@ -610,7 +610,7 @@ export default function DataReportTab() {
           
           return {
             rank: index + 1,
-            keyword: item.displayText,
+            keyword: item.normalizedText,
             id: item.id,
             score: score,
             change: change,

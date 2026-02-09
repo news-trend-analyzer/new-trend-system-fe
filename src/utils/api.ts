@@ -327,7 +327,7 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
 // 데이터 리포트 API 타입 정의
 export interface DataReportRanking {
   id: string;
-  displayText: string;
+  normalizedText: string;
   freqSum: string;
   scoreSum: number;
 }
@@ -349,7 +349,7 @@ export interface RelatedArticle {
 
 export interface RelatedKeyword {
   id: string;
-  displayText: string;
+  normalizedText: string;
   coCount: string;
   weightSum: number;
   associationScore: number;
@@ -495,7 +495,7 @@ export async function fetchRelatedKeywords(keywordId: string): Promise<RelatedKe
 // 키워드 검색 API 타입 정의
 export interface SearchKeywordResult {
   id: string;
-  displayText: string;
+  normalizedText: string;
 }
 
 // 키워드 검색 API
@@ -527,4 +527,3 @@ export async function searchKeyword(query: string, limit: number = 20): Promise<
     throw error;
   }
 }
-
