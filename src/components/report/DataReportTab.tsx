@@ -1052,7 +1052,7 @@ export default function DataReportTab() {
 
                   {/* 트렌드 타임라인 */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-bold text-slate-900 mb-4">Trend Timeline</h3>
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">트렌드 타임라인</h3>
                     {selectedKeyword.trendData && selectedKeyword.trendData.length > 0 ? (
                       <div 
                         className="bg-slate-50 rounded-xl p-4" 
@@ -1097,11 +1097,12 @@ export default function DataReportTab() {
                         <p className="text-slate-500">시계열 데이터가 없습니다.</p>
                       </div>
                     )}
+                    <p className="text-sm text-slate-500 mb-6">트렌드 점수는 키워드 빈도, 시간 데이터를 기반으로 계산됩니다.</p>
                   </div>
 
                   {/* 연관 키워드 */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-bold text-slate-900 mb-3">Related Keywords</h3>
+                    <h3 className="text-lg font-bold text-slate-900 mb-3">연관 키워드</h3>
                     {selectedKeyword.relatedKeywords && selectedKeyword.relatedKeywords.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {selectedKeyword.relatedKeywords.map((keyword, idx) => (
@@ -1121,7 +1122,7 @@ export default function DataReportTab() {
 
                   {/* 주요 기사 */}
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-3">Evidence Articles</h3>
+                    <h3 className="text-lg font-bold text-slate-900 mb-3">이 키워드는 왜?</h3>
                     {selectedKeyword.articles && selectedKeyword.articles.length > 0 ? (
                       <div className="space-y-2">
                         {selectedKeyword.articles.map((article, idx) => (

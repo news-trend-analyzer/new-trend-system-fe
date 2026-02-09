@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Logo from '@/components/Logo';
 
 export default function Footer() {
@@ -36,14 +37,14 @@ export default function Footer() {
             <h3 className="font-bold text-slate-900 mb-4">빠른 링크</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
+                <Link to="/" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
                   실시간 랭킹
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
+                <Link to="/report" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
                   데이터 리포트
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Category, TrendItem, SearchResultResponse } from '@/types';
 import Navigation from '@/components/layout/Navigation';
 import HeroSection from '@/components/layout/HeroSection';
@@ -10,10 +11,11 @@ import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
 import { useTrendFilterWithStatus } from '@/hooks/useTrendFilter';
 
-type TabType = 'trend' | 'report';
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('trend');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isReportPage = location.pathname === '/report';
+
   const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -23,7 +25,18 @@ export default function App() {
 
   const { filteredData, loading, error } = useTrendFilterWithStatus(selectedCategory);
 
-  // 키워드 배열 추출 (첫 번째 기사 제목 또는 키워드)
+  // 리포트 페이지에서 메인으로 돌아올 때 검색 상태 초기화
+  const prevPathnameRef = useRef(location.pathname);
+  useEffect(() => {
+    const prev = prevPathnameRef.current;
+    if (prev === '/report' && location.pathname === '/') {
+      setIsSearchMode(false);
+      setSearchQuery('');
+      setSearchResponse({ total: 0, items: [], page: 1, pageSize: 10 });
+    }
+    prevPathnameRef.current = location.pathname;
+  }, [location.pathname]);
+
   const keywords = filteredData.map(item => item.keyword).filter(Boolean);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
@@ -34,26 +47,16 @@ export default function App() {
   };
 
   const handleBackToTrends = () => {
-    setActiveTab('trend');
+    navigate('/');
     setIsSearchMode(false);
     setSearchQuery('');
     setSearchResponse({ total: 0, items: [], page: 1, pageSize: 10 });
   };
-  const handleDataReportClick = () => {
-    setActiveTab('report');
-    setIsSearchMode(false);
-  };
-
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 flex flex-col">
-      <Navigation 
-        keywords={keywords} 
-        onLogoClick={handleBackToTrends}
-        onTrendRankingClick={handleBackToTrends}
-        onDataReportClick={handleDataReportClick}
-      />
-      {activeTab === 'report' ? (
+      <Navigation keywords={keywords} />
+      {isReportPage ? (
         <DataReportTab />
       ) : (
         <>
@@ -92,7 +95,7 @@ export default function App() {
           <Footer />
         </>
       )}
-      {activeTab !== 'report' && <ScrollToTopButton />}
+      {!isReportPage && <ScrollToTopButton />}
       <TrendDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
     </div>
   );

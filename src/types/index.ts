@@ -57,4 +57,3 @@ export interface SearchResultResponse {
   page?: number;
   pageSize?: number;
 }
-
