@@ -324,6 +324,60 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
   }
 }
 
+// 키워드 기반 기사 조회 함수 (트렌드 상세에서 사용)
+export async function searchArticlesByKeyword(keyword: string, page: number = 1, pageSize: number = 10): Promise<SearchResultResponse> {
+  if (!keyword || keyword.trim().length === 0) {
+    return { total: 0, items: [], page: 1, pageSize };
+  }
+
+  const url = `${SEARCH_API_BASE_URL}/articles/by-keyword?keyword=${encodeURIComponent(keyword.trim())}&page=${page}&size=${pageSize}`;
+
+  if (import.meta.env.DEV) {
+    console.log('키워드 상세 API 호출:', url);
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getSearchApiHeaders(),
+    });
+
+    if (!response.ok) {
+      if (import.meta.env.DEV) {
+        console.warn('키워드 상세 API 호출 실패:', response.status);
+      }
+      return { total: 0, items: [], page, pageSize };
+    }
+
+    const data = await response.json();
+
+    // 예: { total, items: [...], page, size, ... }
+    if (data && typeof data === 'object' && Array.isArray(data.items)) {
+      return {
+        total: data.total || data.items.length,
+        items: data.items.map((item: any): SearchResult => ({
+          id: item.id || item.url || item.title || '',
+          title: item.title || '',
+          link: item.url || item.id || '',
+          press: item.publisher || '',
+          pubDate: item.publishedAt || item.pubDate || '',
+          description: item.description || '',
+          category: item.category || '',
+        })),
+        page: data.page || page,
+        pageSize: data.size || pageSize,
+      };
+    }
+
+    return { total: 0, items: [], page, pageSize };
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('키워드 상세 API 호출 중 에러 발생:', error);
+    }
+    return { total: 0, items: [], page, pageSize };
+  }
+}
+
 // 데이터 리포트 API 타입 정의
 export interface DataReportRanking {
   id: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import { TrendItem, SearchResult, SearchResultResponse } from '@/types';
-import { searchArticles } from '@/utils/api';
+import { searchArticlesByKeyword } from '@/utils/api';
 
 interface TrendDetailModalProps {
   item: TrendItem | null;
@@ -56,7 +56,7 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
         setSearchResponse({ total: 0, items: [], page: 1, pageSize: 10 });
       }
       
-      searchArticles(searchKeyword, currentPage, pageSize)
+      searchArticlesByKeyword(searchKeyword, currentPage, pageSize)
         .then(response => {
           if (!cancelled) {
             setSearchResponse(response);
