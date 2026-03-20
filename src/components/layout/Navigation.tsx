@@ -33,9 +33,6 @@ export default function Navigation({ keywords }: NavigationProps) {
             </NavLink>
           </div>
         </div>
-        <button className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-          <i className="ri-user-line text-xl"></i>
-        </button>
       </div>
     </nav>
   );

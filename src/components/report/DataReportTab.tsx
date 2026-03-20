@@ -742,15 +742,6 @@ export default function DataReportTab() {
                   </div>
                 )}
               </div>
-
-              {/* 새로고침 버튼 */}
-              <button
-                onClick={handleRefresh}
-                className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-medium transition-all flex items-center gap-2"
-              >
-                <i className="ri-refresh-line"></i>
-                <span className="hidden sm:inline">새로고침</span>
-              </button>
             </div>
           </div>
           

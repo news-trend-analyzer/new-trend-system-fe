@@ -1,29 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Category, TrendItem, SearchResultResponse } from '@/types';
+import { TrendItem, SearchResultResponse } from '@/types';
 import Navigation from '@/components/layout/Navigation';
 import HeroSection from '@/components/layout/HeroSection';
 import Footer from '@/components/layout/Footer';
 import ScrollToTopButton from '@/components/layout/ScrollToTopButton';
-import TrendList from '@/components/trend/TrendList';
-import TrendDetailModal from '@/components/modal/TrendDetailModal';
+import TrendListSplit from '@/components/trend/TrendListSplit';
 import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
-import { useTrendFilterWithStatus } from '@/hooks/useTrendFilter';
+import { useTrendSplit } from '@/hooks/useTrendFilter';
 
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReportPage = location.pathname === '/report';
 
-  const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 10 });
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
-  const { filteredData, loading, error } = useTrendFilterWithStatus(selectedCategory);
+  const { dailyData, realtimeData, loading, error } = useTrendSplit('전체');
 
   // 리포트 페이지에서 메인으로 돌아올 때 검색 상태 초기화
   const prevPathnameRef = useRef(location.pathname);
@@ -37,7 +35,7 @@ export default function App() {
     prevPathnameRef.current = location.pathname;
   }, [location.pathname]);
 
-  const keywords = filteredData.map(item => item.keyword).filter(Boolean);
+  const keywords = [...dailyData, ...realtimeData].map(item => item.keyword).filter(Boolean);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
     setSearchQuery(query);
@@ -82,10 +80,10 @@ export default function App() {
                 />
               </div>
             ) : (
-              <TrendList
-                filteredData={filteredData}
-                selectedCategory={selectedCategory}
-                onCategoryChange={setSelectedCategory}
+              <TrendListSplit
+                dailyData={dailyData}
+                realtimeData={realtimeData}
+                selectedItem={selectedItem}
                 onItemClick={setSelectedItem}
                 loading={loading}
                 error={error}
@@ -96,7 +94,6 @@ export default function App() {
         </>
       )}
       {!isReportPage && <ScrollToTopButton />}
-      <TrendDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
     </div>
   );
 }

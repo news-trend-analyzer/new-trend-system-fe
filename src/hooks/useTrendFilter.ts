@@ -2,6 +2,18 @@ import { useMemo } from 'react';
 import { Category, TrendItem, KeywordRanking } from '@/types';
 import { useKeywordRanking } from './useKeywordRanking';
 
+export type TrendSortType = 'daily' | 'realtime';
+
+function sortRankings(rankings: KeywordRanking[], sortBy: TrendSortType): KeywordRanking[] {
+  const sorted = [...rankings];
+  if (sortBy === 'daily') {
+    sorted.sort((a, b) => (b.score24h ?? b.score ?? 0) - (a.score24h ?? a.score ?? 0));
+  } else {
+    sorted.sort((a, b) => (b.scoreRecent ?? b.score ?? 0) - (a.scoreRecent ?? a.score ?? 0));
+  }
+  return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
 function transformRankingsToTrendItems(
   rankings: KeywordRanking[],
   selectedCategory: Category
@@ -49,7 +61,7 @@ function transformRankingsToTrendItems(
       keyword: displayKeyword, // 첫 번째 기사 제목을 키워드로 사용
       originalKeyword: ranking.keyword, // 원래 키워드 저장 (검색용)
       category: '전체' as Category, // API에 카테고리 정보가 없으므로 기본값
-      description: `${ranking.keyword} 키워드는 현재 최근 24시간 기준 ${totalScore.toFixed(1)}점으로 많은 관심을 받고 있는 키워드입니다.`,
+      description: `Score: ${totalScore.toFixed(0)}점`,
       status: mappedStatus,
       trendData,
       articles,
@@ -116,5 +128,24 @@ export function useTrendFilterWithStatus(selectedCategory: Category) {
   }, [rankings, selectedCategory, loading, error]);
 
   return { filteredData, loading, error };
+}
+
+/** 메인 화면 2열 레이아웃용: 일간(24h) + 실시간(recent) 랭킹 분리 */
+export function useTrendSplit(selectedCategory: Category) {
+  const { rankings, loading, error } = useKeywordRanking();
+
+  const { dailyData, realtimeData } = useMemo(() => {
+    if (loading || error || !rankings?.length) {
+      return { dailyData: [] as TrendItem[], realtimeData: [] as TrendItem[] };
+    }
+    const dailyRankings = sortRankings(rankings, 'daily');
+    const realtimeRankings = sortRankings(rankings, 'realtime');
+    return {
+      dailyData: transformRankingsToTrendItems(dailyRankings, selectedCategory),
+      realtimeData: transformRankingsToTrendItems(realtimeRankings, selectedCategory),
+    };
+  }, [rankings, selectedCategory, loading, error]);
+
+  return { dailyData, realtimeData, loading, error };
 }
 
