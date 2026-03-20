@@ -32,8 +32,8 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
     if (!item) return '';
     // originalKeyword가 있으면 사용, 없으면 keyword 사용
     const keyword = item.originalKeyword || item.keyword;
-    // ":"를 띄어쓰기로 변환하여 검색어 생성 (예: "국민배우:안성기" -> "국민배우 안성기")
-    return keyword.replace(/:/g, ' ').trim();
+    // articles/by-keyword 엔드포인트는 키워드 자체를 매칭하므로 ":" 포함 원본을 그대로 사용
+    return keyword.trim();
   }, [item]);
 
   useEffect(() => {
