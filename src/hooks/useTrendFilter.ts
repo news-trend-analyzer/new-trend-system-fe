@@ -1,16 +1,12 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Category, TrendItem, KeywordRanking } from '@/types';
 import { useKeywordRanking } from './useKeywordRanking';
+import { fetchRealtimeRanking } from '@/utils/api';
 
 export type TrendSortType = 'daily' | 'realtime';
 
-function sortRankings(rankings: KeywordRanking[], sortBy: TrendSortType): KeywordRanking[] {
-  const sorted = [...rankings];
-  if (sortBy === 'daily') {
-    sorted.sort((a, b) => (b.score24h ?? b.score ?? 0) - (a.score24h ?? a.score ?? 0));
-  } else {
-    sorted.sort((a, b) => (b.scoreRecent ?? b.score ?? 0) - (a.scoreRecent ?? a.score ?? 0));
-  }
+function sortRankingsForDaily(rankings: KeywordRanking[]): KeywordRanking[] {
+  const sorted = [...rankings].sort((a, b) => (b.score24h ?? b.score ?? 0) - (a.score24h ?? a.score ?? 0));
   return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
@@ -40,26 +36,51 @@ function transformRankingsToTrendItems(
     const mappedStatus: 'up' | 'down' | 'same' =
       ranking.status === 'down' ? 'down' : ranking.status === 'same' ? 'same' : 'up';
 
-    // 첫 번째 기사 제목을 키워드로 사용 (없으면 원래 keyword 사용)
-    const displayKeyword = ranking.articles && ranking.articles.length > 0 
-      ? ranking.articles[0] 
-      : ranking.keyword;
+    // articles: string[] 또는 { title/headline/text/name }[] 형식 지원
+    const articleTitles: string[] = (ranking.articles ?? []).map((a: unknown) => {
+      if (typeof a === 'string') return a;
+      if (a && typeof a === 'object') {
+        const o = a as Record<string, unknown>;
+        const t = o.title ?? o.headline ?? o.text ?? o.name ?? o.articleTitle ?? '';
+        return String(t ?? '');
+      }
+      return '';
+    }).filter(Boolean);
+
+    // keyword 우선 (다양한 필드명 지원), 없으면 첫 기사 제목 사용
+    const r = ranking as unknown as Record<string, unknown>;
+    const rawKeyword = [
+      ranking.keyword,
+      ranking.query,
+      ranking.name,
+      r?.normalizedText,
+      r?.keywordText,
+      r?.text,
+    ]
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)[0] ?? '';
+    const displayKeyword = rawKeyword || (articleTitles[0] ?? '');
 
     // 기사 제목 배열을 Article 형태로 변환
-    const articles = ranking.articles ? ranking.articles.map((title, articleIndex) => ({
+    const articles = articleTitles.map((title, articleIndex) => ({
       id: articleIndex + 1,
       thumbnail: `https://picsum.photos/200/120?random=${index * 10 + articleIndex}`,
       title: title,
       summary: `${title}에 대한 상세 내용입니다.`,
       source: '트렌드뉴스',
       date: '1시간 전',
-    })) : [];
+    }));
 
     return {
       id: index + 1,
-      rank: ranking.rank, // API에서 받은 rank 사용
-      keyword: displayKeyword, // 첫 번째 기사 제목을 키워드로 사용
-      originalKeyword: ranking.keyword, // 원래 키워드 저장 (검색용)
+      rank: ranking.rank ?? index + 1,
+      keyword: (() => {
+        const kw = displayKeyword || `키워드 #${ranking.rank ?? index + 1}`;
+        if (import.meta.env.DEV && !displayKeyword) {
+          console.warn('[Trend] 키워드 없음, 폴백 사용:', { rank: ranking.rank, raw: ranking });
+        }
+        return kw;
+      })(),
+      originalKeyword: rawKeyword || displayKeyword,
       category: '전체' as Category, // API에 카테고리 정보가 없으므로 기본값
       description: `Score: ${totalScore.toFixed(0)}점`,
       status: mappedStatus,
@@ -130,21 +151,41 @@ export function useTrendFilterWithStatus(selectedCategory: Category) {
   return { filteredData, loading, error };
 }
 
-/** 메인 화면 2열 레이아웃용: 일간(24h) + 실시간(recent) 랭킹 분리 */
+/** 메인 화면 2열 레이아웃용: 일간(/trend/top) + 실시간(/trend/realtime) 별도 API */
 export function useTrendSplit(selectedCategory: Category) {
-  const { rankings, loading, error } = useKeywordRanking();
+  const { rankings: dailyRankings, loading: dailyLoading, error: dailyError } = useKeywordRanking();
+  const [realtimeRankings, setRealtimeRankings] = useState<KeywordRanking[]>([]);
+  const [realtimeLoading, setRealtimeLoading] = useState(true);
+  const [realtimeError, setRealtimeError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setRealtimeLoading(true);
+        setRealtimeError(null);
+        const data = await fetchRealtimeRanking(10);
+        setRealtimeRankings(data);
+      } catch (err) {
+        setRealtimeError(err instanceof Error ? err : new Error('알 수 없는 오류가 발생했습니다'));
+      } finally {
+        setRealtimeLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const loading = dailyLoading || realtimeLoading;
+  const error = dailyError || realtimeError;
 
   const { dailyData, realtimeData } = useMemo(() => {
-    if (loading || error || !rankings?.length) {
-      return { dailyData: [] as TrendItem[], realtimeData: [] as TrendItem[] };
-    }
-    const dailyRankings = sortRankings(rankings, 'daily');
-    const realtimeRankings = sortRankings(rankings, 'realtime');
-    return {
-      dailyData: transformRankingsToTrendItems(dailyRankings, selectedCategory),
-      realtimeData: transformRankingsToTrendItems(realtimeRankings, selectedCategory),
-    };
-  }, [rankings, selectedCategory, loading, error]);
+    const daily = dailyError || !dailyRankings?.length
+      ? []
+      : transformRankingsToTrendItems(sortRankingsForDaily(dailyRankings), selectedCategory);
+    const realtime = realtimeError || !realtimeRankings?.length
+      ? []
+      : transformRankingsToTrendItems(realtimeRankings, selectedCategory);
+    return { dailyData: daily, realtimeData: realtime };
+  }, [dailyRankings, dailyError, realtimeRankings, realtimeError, selectedCategory]);
 
   return { dailyData, realtimeData, loading, error };
 }

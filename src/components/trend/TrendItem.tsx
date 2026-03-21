@@ -26,7 +26,7 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
     return () => clearInterval(interval);
   }, [titles.length]);
 
-  const currentTitle = titles[currentTitleIndex] || item.keyword;
+  const currentTitle = titles[currentTitleIndex] || item.keyword || `키워드 #${item.rank}`;
 
   return (
     <div

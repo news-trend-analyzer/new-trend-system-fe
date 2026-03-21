@@ -141,6 +141,40 @@ export async function fetchKeywordRanking(): Promise<KeywordRanking[]> {
   }
 }
 
+export async function fetchRealtimeRanking(limit: number = 10): Promise<KeywordRanking[]> {
+  const url = `${API_BASE_URL}/trend/realtime?limit=${limit}`;
+
+  if (import.meta.env.DEV) {
+    console.log('API 호출:', url);
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getTrendApiHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (import.meta.env.DEV) {
+        console.error('API 에러 응답:', errorText);
+      }
+      throw new Error(`API 호출 실패: ${response.status} ${response.statusText}${import.meta.env.DEV ? ` - ${errorText}` : ''}`);
+    }
+
+    const data = await response.json();
+    // 응답이 배열이 아니면 data/items/rankings 등에서 추출
+    if (Array.isArray(data)) return data;
+    const arr = data?.data ?? data?.items ?? data?.rankings ?? [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('실시간 API 호출 중 에러 발생:', error);
+    }
+    throw error;
+  }
+}
+
 export async function searchSuggestions(query: string): Promise<SearchSuggestion[]> {
   if (!query || query.trim().length === 0) {
     return [];

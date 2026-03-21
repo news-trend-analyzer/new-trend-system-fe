@@ -22,9 +22,11 @@ export interface TrendItem {
 }
 
 export interface KeywordRanking {
-  id: string;
-  rank: number;
-  keyword: string;
+  id?: string;
+  rank?: number;
+  keyword?: string;
+  query?: string;
+  name?: string;
   type: 'COMPOSITE' | 'SINGLE' | string;
   status: 'new' | 'up' | 'down' | 'same';
   rankChange: number;
