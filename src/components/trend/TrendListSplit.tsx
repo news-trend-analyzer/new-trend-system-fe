@@ -112,7 +112,7 @@ export default function TrendListSplit({
                         key={`${item.id}-${item.rank}-${activeTab}`}
                         item={item}
                         index={idx}
-                        onClick={() => onItemClick(item)}
+                        onClick={() => onItemClick({ ...item, trendType: activeTab })}
                         isSelected={
                           selectedItem &&
                           (selectedItem.originalKeyword || selectedItem.keyword) === (item.originalKeyword || item.keyword)

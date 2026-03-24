@@ -175,6 +175,55 @@ export async function fetchRealtimeRanking(limit: number = 10): Promise<KeywordR
   }
 }
 
+interface KeywordInsightResponse {
+  keywordId: string;
+  keyword: string;
+  summary: string | null;
+  articleIds: string[] | null;
+  analyzedAt: string | null;
+}
+
+// 키워드 AI 인사이트 요약 조회 (단건: /trend/keyword-insight/:keywordId)
+export async function fetchKeywordInsight(keywordId: string): Promise<Pick<KeywordInsightResponse, 'keyword' | 'summary'> | null> {
+  if (!keywordId || keywordId.trim().length === 0) {
+    return null;
+  }
+
+  const url = `${API_BASE_URL}/trend/keyword-insight/${encodeURIComponent(keywordId.trim())}`;
+
+  if (import.meta.env.DEV) {
+    console.log('키워드 인사이트 API 호출:', url);
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getTrendApiHeaders(),
+    });
+
+    if (!response.ok) {
+      if (import.meta.env.DEV) {
+        const errorText = await response.text();
+        console.warn('키워드 인사이트 API 호출 실패:', response.status, errorText);
+      }
+      return null;
+    }
+
+    const data = (await response.json()) as Partial<KeywordInsightResponse> | null;
+    if (!data || typeof data !== 'object') return null;
+
+    return {
+      keyword: typeof data.keyword === 'string' ? data.keyword : '',
+      summary: typeof data.summary === 'string' ? data.summary : null,
+    };
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('키워드 인사이트 API 호출 중 에러 발생:', error);
+    }
+    return null;
+  }
+}
+
 export async function searchSuggestions(query: string): Promise<SearchSuggestion[]> {
   if (!query || query.trim().length === 0) {
     return [];

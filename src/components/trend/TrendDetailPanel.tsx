@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import { TrendItem, SearchResult, SearchResultResponse } from '@/types';
-import { searchArticlesByKeyword } from '@/utils/api';
+import { fetchKeywordInsight, searchArticlesByKeyword } from '@/utils/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TrendDetailPanelProps {
   item: TrendItem | null;
@@ -18,6 +20,27 @@ const formatDate = (dateString: string): string => {
     return dateString;
   }
 };
+
+function normalizeMarkdown(text: string): string {
+  return text
+    // 제로폭 문자 제거 (마크다운 파싱 방해)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // 백엔드에서 이스케이프된 줄바꿈을 실제 줄바꿈으로 복원
+    .replace(/\\n/g, '\n')
+    // 이스케이프된 마크다운 기호 복원 (\*\*bold\*\* -> **bold**)
+    .replace(/\\([\\`*_{}[\]()#+\-.!>~|])/g, '$1')
+    // 전각 별표(＊)를 일반 별표(*)로 통일
+    .replace(/＊/g, '*')
+    // ***text*** 같은 구문은 **text**로 단순화
+    .replace(/\*{3,}/g, '**')
+    // **"text"** / **“text”** 형태는 따옴표 안쪽을 bold로 재배치
+    .replace(/\*\*\s*(["“‘])/g, '$1**')
+    .replace(/(["”’])\s*\*\*/g, '**$1')
+    // 볼드 구문 주변 불필요 공백 제거 (** text ** -> **text**)
+    .replace(/\*\*\s+/g, '**')
+    .replace(/\s+\*\*/g, '**')
+    .trim();
+}
 
 const SearchResultItem = memo(({ result }: { result: SearchResult }) => {
   const cleanDescription = useMemo(() => {
@@ -137,7 +160,11 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 5 });
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [keywordInsight, setKeywordInsight] = useState('');
+  const [insightKeyword, setInsightKeyword] = useState('');
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
   const pageSize = 5;
+  const isRealtimeItem = item?.trendType === 'realtime';
 
   const searchKeyword = useMemo(() => {
     if (!item) return '';
@@ -149,8 +176,49 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
     if (item) {
       setCurrentPage(1);
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
+      setKeywordInsight('');
+      setInsightKeyword('');
     }
   }, [item]);
+
+  useEffect(() => {
+    if (isRealtimeItem) {
+      setInsightKeyword('');
+      setKeywordInsight('');
+      setIsInsightLoading(false);
+      return;
+    }
+
+    if (item?.id) {
+      let cancelled = false;
+      setIsInsightLoading(true);
+
+      fetchKeywordInsight(String(item.id))
+        .then((insightData) => {
+          if (!cancelled) {
+            setInsightKeyword(insightData?.keyword ?? '');
+            setKeywordInsight(insightData?.summary ?? '');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setInsightKeyword('');
+            setKeywordInsight('');
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsInsightLoading(false);
+          }
+        });
+
+      return () => { cancelled = true; };
+    }
+
+    setInsightKeyword('');
+    setKeywordInsight('');
+    setIsInsightLoading(false);
+  }, [item, isRealtimeItem]);
 
   useEffect(() => {
     if (item && searchKeyword) {
@@ -221,8 +289,75 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
 
       <div className="flex-1 overflow-y-auto p-6">
         <section className="mb-6">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">키워드 분석</h4>
-          <p className="text-slate-700 leading-relaxed text-sm">{item.description}</p>
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <i className="ri-robot-2-line text-sm text-teal-600"></i>
+            AI 요약
+            <span className="text-[11px] font-medium normal-case tracking-normal text-amber-700">
+              (참고용, 원문 확인 권장)
+            </span>
+          </h4>
+          {isInsightLoading ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-slate-400 leading-relaxed text-sm">AI 요약 생성 중...</p>
+            </div>
+          ) : isRealtimeItem ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-amber-700 leading-relaxed text-sm font-medium">
+                실시간 랭킹에서는 AI 요약을 제공하지 않습니다.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-teal-100 text-teal-700 text-[11px] font-semibold mb-2">
+                <i className="ri-sparkling-2-line text-xs"></i>
+                AI 요약
+              </div>
+              {insightKeyword && (
+                <p className="text-[11px] font-semibold text-teal-700 mb-2">
+                  키워드: <span className="text-teal-800">{insightKeyword}</span>
+                </p>
+              )}
+              {keywordInsight ? (
+                <div className="text-slate-700 leading-7 text-[15px] break-words">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 mb-3 last:mb-0 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 last:mb-0 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li>{children}</li>,
+                      strong: ({ children }) => <strong className="font-bold text-slate-800">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-700 underline underline-offset-2 hover:text-teal-800"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      code: ({ children }) => (
+                        <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[13px]">{children}</code>
+                      ),
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-teal-200 pl-3 text-slate-600 mb-3 last:mb-0">
+                          {children}
+                        </blockquote>
+                      ),
+                    }}
+                  >
+                    {normalizeMarkdown(keywordInsight)}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-slate-500 leading-relaxed text-sm">
+                  AI 요약 정보가 없습니다.
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         <section>

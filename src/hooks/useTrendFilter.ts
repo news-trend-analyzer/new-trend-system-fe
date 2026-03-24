@@ -74,7 +74,7 @@ function transformRankingsToTrendItems(
     }));
 
     return {
-      id: index + 1,
+      id: ranking.id ?? index + 1,
       rank: ranking.rank ?? index + 1,
       keyword: (() => {
         const kw = displayKeyword || `키워드 #${ranking.rank ?? index + 1}`;

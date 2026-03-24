@@ -10,7 +10,8 @@ export interface Article {
 }
 
 export interface TrendItem {
-  id: number;
+  id: string | number; // 백엔드 키워드 ID
+  trendType?: 'daily' | 'realtime';
   rank: number;
   keyword: string;
   originalKeyword?: string; // API에서 받은 원래 키워드 (검색용)
