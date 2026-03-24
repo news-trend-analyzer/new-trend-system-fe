@@ -805,12 +805,12 @@ export default function DataReportTab() {
                       #{keyword.rank}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1 flex-wrap">
-                        <h3 className="text-lg font-bold group-hover:text-teal-600 line-clamp-1">
+                      <div className="flex items-center gap-3 mb-1 flex-nowrap min-w-0">
+                        <h3 className="text-lg font-bold group-hover:text-teal-600 line-clamp-1 min-w-0 flex-1">
                           {keyword.keyword}
                         </h3>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                        <div className="flex items-center flex-shrink-0">
+                          <span className={`text-xs font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap ${
                             keyword.status === 'up' ? 'bg-rose-50 text-rose-600' : 
                             keyword.status === 'down' ? 'bg-blue-50 text-blue-600' : 
                             'bg-slate-50 text-slate-600'
@@ -826,32 +826,25 @@ export default function DataReportTab() {
                       </div>
                       <p className="text-slate-500 text-sm">Score: {keyword.score.toLocaleString()}</p>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="hidden sm:block">
-                        <svg width="80" height="30" className="text-teal-500 stroke-current fill-none">
-                          <polyline
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={(() => {
-                              if (keyword.trendData.length === 0) return '';
-                              const max = Math.max(...keyword.trendData);
-                              const min = Math.min(...keyword.trendData);
-                              const range = max - min || 1;
-                              return keyword.trendData.map((val, i) => {
-                                const x = (i / (keyword.trendData.length - 1 || 1)) * 80;
-                                const y = 30 - ((val - min) / range) * 25;
-                                return `${x},${y}`;
-                              }).join(' ');
-                            })()}
-                          />
-                        </svg>
-                      </div>
-                      <div className="w-12 text-center">
-                        {keyword.status === 'up' && <i className="ri-arrow-up-s-fill text-rose-500 text-2xl"></i>}
-                        {keyword.status === 'down' && <i className="ri-arrow-down-s-fill text-blue-500 text-2xl"></i>}
-                        {keyword.status === 'same' && <div className="h-[2px] w-4 bg-slate-300 mx-auto rounded"></div>}
-                      </div>
+                    <div className="hidden sm:block flex-shrink-0">
+                      <svg width="80" height="30" className="text-teal-500 stroke-current fill-none">
+                        <polyline
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={(() => {
+                            if (keyword.trendData.length === 0) return '';
+                            const max = Math.max(...keyword.trendData);
+                            const min = Math.min(...keyword.trendData);
+                            const range = max - min || 1;
+                            return keyword.trendData.map((val, i) => {
+                              const x = (i / (keyword.trendData.length - 1 || 1)) * 80;
+                              const y = 30 - ((val - min) / range) * 25;
+                              return `${x},${y}`;
+                            }).join(' ');
+                          })()}
+                        />
+                      </svg>
                     </div>
                   </button>
                   ))

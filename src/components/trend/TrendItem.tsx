@@ -41,7 +41,7 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
         #{item.rank}
       </div>
       <div className="flex-1">
-        <div className="flex items-center gap-3 mb-1 flex-wrap">
+        <div className="flex items-center gap-3 mb-1 flex-nowrap">
           <div className="flex-1 min-w-0 relative h-7 overflow-hidden">
             <h3
               key={currentTitleIndex}
@@ -51,22 +51,22 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
             </h3>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 h-6">
-            {/* 상태 표시 - 고정 크기로 수직 정렬 */}
-            <div className="flex items-center justify-center w-14 h-6 shrink-0">
+            {/* 상태 표시 - 가로 배치 유지, 줄바꿈 방지 */}
+            <div className="flex items-center shrink-0">
               {item.status === 'up' && (
-                <div className="flex items-center justify-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full h-5">
-                  <i className="ri-arrow-up-s-fill text-sm leading-none"></i>
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full whitespace-nowrap">
+                  <i className="ri-arrow-up-s-fill text-sm leading-none shrink-0"></i>
                   <span className="text-xs font-semibold leading-none">상승</span>
                 </div>
               )}
               {item.status === 'down' && (
-                <div className="flex items-center justify-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full h-5">
-                  <i className="ri-arrow-down-s-fill text-sm leading-none"></i>
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full whitespace-nowrap">
+                  <i className="ri-arrow-down-s-fill text-sm leading-none shrink-0"></i>
                   <span className="text-xs font-semibold leading-none">하강</span>
                 </div>
               )}
               {item.status === 'same' && (
-                <div className="flex items-center justify-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-600 rounded-full h-5">
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 text-slate-600 rounded-full whitespace-nowrap">
                   <div className="h-[2px] w-3 bg-slate-400 rounded shrink-0"></div>
                   <span className="text-xs font-semibold leading-none">유지</span>
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TrendItem as TrendItemType } from '@/types';
 import TrendItem from './TrendItem';
 import TrendDetailPanel from './TrendDetailPanel';
@@ -14,6 +14,14 @@ interface TrendListSplitProps {
 
 type TabType = 'daily' | 'realtime';
 
+const TAB_PARAM = 'tab';
+
+function parseTabFromSearch(search: string): TabType {
+  const params = new URLSearchParams(search);
+  const t = params.get(TAB_PARAM)?.toLowerCase();
+  return t === 'realtime' ? 'realtime' : 'daily';
+}
+
 export default function TrendListSplit({
   dailyData,
   realtimeData,
@@ -22,7 +30,21 @@ export default function TrendListSplit({
   loading = false,
   error = null,
 }: TrendListSplitProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('daily');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = parseTabFromSearch(searchParams.toString());
+
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'daily') {
+        next.delete(TAB_PARAM);
+      } else {
+        next.set(TAB_PARAM, tab);
+      }
+      return next;
+    });
+  };
+
   const currentData = activeTab === 'daily' ? dailyData : realtimeData;
 
   return (
