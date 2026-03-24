@@ -51,9 +51,12 @@ function transformRankingsToTrendItems(
     const r = ranking as unknown as Record<string, unknown>;
     const rawKeyword = [
       ranking.keyword,
+      r?.displayText,
+      r?.displaytext,
       ranking.query,
       ranking.name,
       r?.normalizedText,
+      r?.normalized_text,
       r?.keywordText,
       r?.text,
     ]
