@@ -262,7 +262,7 @@ export default function DataReportTab() {
             
             return {
               rank: index + 1,
-              keyword: item.normalizedText,
+              keyword: item.display_text || item.displayText || item.normalizedText,
               id: item.id,
               score: score,
               change: change,
@@ -610,7 +610,7 @@ export default function DataReportTab() {
           
           return {
             rank: index + 1,
-            keyword: item.normalizedText,
+            keyword: item.display_text || item.displayText || item.normalizedText,
             id: item.id,
             score: score,
             change: change,

@@ -465,6 +465,8 @@ export async function searchArticlesByKeyword(keyword: string, page: number = 1,
 export interface DataReportRanking {
   id: string;
   normalizedText: string;
+  displayText?: string;
+  display_text?: string;
   freqSum: string;
   scoreSum: number;
 }
