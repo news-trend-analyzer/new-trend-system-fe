@@ -407,13 +407,13 @@ export async function searchArticles(query: string, page: number = 1, pageSize: 
   }
 }
 
-// 키워드 기반 기사 조회 함수 (트렌드 상세에서 사용)
-export async function searchArticlesByKeyword(keyword: string, page: number = 1, pageSize: number = 10): Promise<SearchResultResponse> {
-  if (!keyword || keyword.trim().length === 0) {
+// 키워드 ID 기반 기사 조회 함수 (트렌드 상세에서 사용)
+export async function searchArticlesByKeyword(keywordId: string, page: number = 1, pageSize: number = 10): Promise<SearchResultResponse> {
+  if (!keywordId || String(keywordId).trim().length === 0) {
     return { total: 0, items: [], page: 1, pageSize };
   }
 
-  const url = `${SEARCH_API_BASE_URL}/articles/by-keyword?keyword=${encodeURIComponent(keyword.trim())}&page=${page}&size=${pageSize}`;
+  const url = `${SEARCH_API_BASE_URL}/articles/by-keyword?keywordId=${encodeURIComponent(String(keywordId).trim())}&page=${page}&size=${pageSize}`;
 
   if (import.meta.env.DEV) {
     console.log('키워드 상세 API 호출:', url);

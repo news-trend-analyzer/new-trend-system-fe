@@ -166,12 +166,6 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
   const pageSize = 5;
   const isRealtimeItem = item?.trendType === 'realtime';
 
-  const searchKeyword = useMemo(() => {
-    if (!item) return '';
-    const keyword = item.originalKeyword || item.keyword;
-    return keyword.trim();
-  }, [item]);
-
   useEffect(() => {
     if (item) {
       setCurrentPage(1);
@@ -221,7 +215,7 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
   }, [item, isRealtimeItem]);
 
   useEffect(() => {
-    if (item && searchKeyword) {
+    if (item?.id) {
       let cancelled = false;
       if (currentPage > 1 && searchResponse.items.length > 0) {
         setIsLoading(true);
@@ -230,7 +224,7 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
         setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       }
 
-      searchArticlesByKeyword(searchKeyword, currentPage, pageSize)
+      searchArticlesByKeyword(String(item.id), currentPage, pageSize)
         .then((response) => {
           if (!cancelled) setSearchResponse(response);
         })
@@ -245,7 +239,7 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       setIsLoading(false);
     }
-  }, [item, searchKeyword, currentPage]);
+  }, [item, currentPage]);
 
   if (!item) {
     return (

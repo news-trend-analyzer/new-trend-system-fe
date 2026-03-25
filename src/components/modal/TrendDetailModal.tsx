@@ -27,15 +27,6 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
   const [isLoading, setIsLoading] = useState(false);
   const pageSize = 10;
 
-  // 검색어: 원래 키워드 사용 (복합키에서 :를 띄어쓰기로 변환)
-  const searchKeyword = useMemo(() => {
-    if (!item) return '';
-    // originalKeyword가 있으면 사용, 없으면 keyword 사용
-    const keyword = item.originalKeyword || item.keyword;
-    // articles/by-keyword 엔드포인트는 키워드 자체를 매칭하므로 ":" 포함 원본을 그대로 사용
-    return keyword.trim();
-  }, [item]);
-
   useEffect(() => {
     if (item) {
       setCurrentPage(1); // 새로운 아이템이 선택되면 첫 페이지로 리셋
@@ -44,7 +35,7 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
   }, [item]);
 
   useEffect(() => {
-    if (item && searchKeyword) {
+    if (item?.id) {
       let cancelled = false;
       
       // 첫 페이지가 아니고 기존 결과가 있으면 이전 결과 유지하면서 로딩
@@ -56,7 +47,7 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
         setSearchResponse({ total: 0, items: [], page: 1, pageSize: 10 });
       }
       
-      searchArticlesByKeyword(searchKeyword, currentPage, pageSize)
+      searchArticlesByKeyword(String(item.id), currentPage, pageSize)
         .then(response => {
           if (!cancelled) {
             setSearchResponse(response);
@@ -84,7 +75,7 @@ export default function TrendDetailModal({ item, onClose }: TrendDetailModalProp
       setSearchResponse({ total: 0, items: [], page: 1, pageSize });
       setIsLoading(false);
     }
-  }, [item, searchKeyword, currentPage]);
+  }, [item, currentPage]);
   if (!item) return null;
 
   return (
