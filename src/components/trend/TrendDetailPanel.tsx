@@ -369,28 +369,32 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
             </div>
           ) : (
             <>
-              <div className="relative h-[720px]">
+              <div className="relative w-full">
+                <div className="max-h-[min(720px,70dvh)] overflow-y-auto overscroll-y-contain rounded-xl">
+                  <div className={`grid gap-3 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {searchResponse.items.map((result, index) => (
+                      <SearchResultItem key={result.id || index} result={result} />
+                    ))}
+                  </div>
+                </div>
                 {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-xl">
+                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/80">
                     <div className="text-center">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-teal-500 border-t-transparent mb-2"></div>
                       <p className="text-slate-500 text-sm">로딩 중...</p>
                     </div>
                   </div>
                 )}
-                <div className={`grid gap-3 mb-4 ${isLoading ? 'opacity-50' : ''}`}>
-                  {searchResponse.items.map((result, index) => (
-                    <SearchResultItem key={result.id || index} result={result} />
-                  ))}
-                </div>
               </div>
               {searchResponse.total > pageSize && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(searchResponse.total / pageSize)}
-                  onPageChange={setCurrentPage}
-                  disabled={isLoading}
-                />
+                <div className="mt-4 shrink-0">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(searchResponse.total / pageSize)}
+                    onPageChange={setCurrentPage}
+                    disabled={isLoading}
+                  />
+                </div>
               )}
             </>
           )}

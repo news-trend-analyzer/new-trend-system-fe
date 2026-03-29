@@ -8,12 +8,19 @@ import ScrollToTopButton from '@/components/layout/ScrollToTopButton';
 import TrendListSplit from '@/components/trend/TrendListSplit';
 import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
+import LegalMarkdownPage from '@/pages/LegalMarkdownPage';
 import { useTrendSplit } from '@/hooks/useTrendFilter';
+
+const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = {
+  '/terms': { slug: 'terms', documentLabel: '이용약관' },
+  '/privacy': { slug: 'privacy', documentLabel: '개인정보처리방침' },
+};
 
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReportPage = location.pathname === '/report';
+  const legalPage = LEGAL_PAGE_MAP[location.pathname];
 
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -56,6 +63,11 @@ export default function App() {
       <Navigation keywords={keywords} />
       {isReportPage ? (
         <DataReportTab />
+      ) : legalPage ? (
+        <>
+          <LegalMarkdownPage slug={legalPage.slug} documentLabel={legalPage.documentLabel} />
+          <Footer />
+        </>
       ) : (
         <>
           <HeroSection onSearch={handleSearch} />

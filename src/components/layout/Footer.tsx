@@ -65,27 +65,49 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
+                <Link to="/terms" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
                   이용약관
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-slate-600 hover:text-teal-600 transition-colors text-sm">
+                  개인정보처리방침
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* 하단 저작권 */}
+        {/* 쿠팡 파트너스: 안내에 따른 필수 고지 문구 + 링크 */}
         <div className="pt-8 border-t border-slate-200">
+          <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
+            이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+          </p>
+          <p className="mt-2 text-xs text-slate-500 max-w-3xl">
+            <a
+              href="https://link.coupang.com/a/edGiOd"
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="text-teal-600 hover:text-teal-700 underline underline-offset-2"
+            >
+              쿠팡에서 보기
+            </a>
+          </p>
+        </div>
+
+        {/* 하단 저작권 */}
+        <div className="pt-6 border-t border-slate-200">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-500 text-sm">
               © {currentYear} TREN:D LAB. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
-              <a href="#" className="text-slate-500 hover:text-teal-600 transition-colors">
+              <Link to="/privacy" className="text-slate-500 hover:text-teal-600 transition-colors">
                 개인정보처리방침
-              </a>
-              <a href="#" className="text-slate-500 hover:text-teal-600 transition-colors">
+              </Link>
+              <Link to="/terms" className="text-slate-500 hover:text-teal-600 transition-colors">
                 서비스 이용약관
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TrendItem as TrendItemType } from '@/types';
 import TrendItem from './TrendItem';
@@ -30,8 +31,20 @@ export default function TrendListSplit({
   loading = false,
   error = null,
 }: TrendListSplitProps) {
+  const detailPanelRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseTabFromSearch(searchParams.toString());
+
+  /* 단일 열(모바일)에서만: 목록 항목 선택 후 상세 패널이 보이도록 스크롤 */
+  useEffect(() => {
+    if (!selectedItem) return;
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+
+    const id = requestAnimationFrame(() => {
+      detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [selectedItem]);
 
   const setActiveTab = (tab: TabType) => {
     setSearchParams(prev => {
@@ -125,8 +138,13 @@ export default function TrendListSplit({
             </div>
           </div>
 
-          {/* 우측: 키워드 상세 */}
-          <div className={`lg:col-span-2 w-full transition-all duration-300 ${selectedItem ? 'min-h-[400px]' : ''}`}>
+          {/* 우측: 키워드 상세 (모바일 스크롤 시 sticky 네비에 안 가리도록 scroll-mt) */}
+          <div
+            ref={detailPanelRef}
+            className={`lg:col-span-2 w-full transition-all duration-300 scroll-mt-[5.25rem] lg:scroll-mt-0 ${
+              selectedItem ? 'min-h-[400px]' : ''
+            }`}
+          >
             <TrendDetailPanel item={selectedItem} />
           </div>
         </div>

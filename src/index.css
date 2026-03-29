@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 모바일(<md)에서만 루트 rem을 줄여 text-/leading·간격(rem)이 함께 컴팩트해짐 */
+@layer base {
+  html {
+    font-size: 15px;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px;
+    }
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -11,6 +23,11 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* 노치·홈 인디케이터가 있는 기기 상단 여백 */
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }
 

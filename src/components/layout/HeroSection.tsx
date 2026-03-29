@@ -115,10 +115,10 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
   };
 
   return (
-    <section className="bg-gradient-to-b from-white to-slate-50 pt-16 pb-12">
+    <section className="bg-gradient-to-b from-white to-slate-50 pt-8 pb-8 sm:pt-12 sm:pb-12 md:pt-16 md:pb-12">
       <div className="max-w-4xl mx-auto px-4 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6">
-          지금 대한민국에서 <br/>
+        <h1 className="text-[1.65rem] leading-snug sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-5 sm:mb-6">
+          지금 대한민국에서 <br />
           <span className="text-teal-500">가장 뜨거운 트렌드</span>를 만나보세요
         </h1>
         <div ref={searchRef} className="relative max-w-2xl mx-auto">
@@ -138,7 +138,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               }}
               onKeyDown={handleKeyDown}
               placeholder="궁금한 키워드를 검색해보세요"
-              className="w-full px-6 py-4 rounded-2xl border-none shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 focus:ring-2 focus:ring-teal-500 outline-none text-lg transition-all"
+              className="w-full pl-4 pr-[4.25rem] sm:pl-6 sm:pr-28 py-3.5 sm:py-4 rounded-2xl border-none shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 focus:ring-2 focus:ring-teal-500 outline-none text-base sm:text-lg transition-all"
             />
             <button 
               onClick={handleSearch}
