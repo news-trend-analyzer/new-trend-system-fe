@@ -9,6 +9,7 @@ import TrendListSplit from '@/components/trend/TrendListSplit';
 import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
 import LegalMarkdownPage from '@/pages/LegalMarkdownPage';
+import { sendGtagPageView } from '@/lib/analytics';
 import { useTrendSplit } from '@/hooks/useTrendFilter';
 
 const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = {
@@ -29,6 +30,15 @@ export default function App() {
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
   const { dailyData, realtimeData, loading, error } = useTrendSplit('전체');
+
+  const gaFirstLoadRef = useRef(true);
+  useEffect(() => {
+    if (gaFirstLoadRef.current) {
+      gaFirstLoadRef.current = false;
+      return;
+    }
+    sendGtagPageView(location.pathname, location.search);
+  }, [location.pathname, location.search]);
 
   // 리포트 페이지에서 메인으로 돌아올 때 검색 상태 초기화
   const prevPathnameRef = useRef(location.pathname);
