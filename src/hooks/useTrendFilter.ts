@@ -5,9 +5,31 @@ import { fetchRealtimeRanking } from '@/utils/api';
 
 export type TrendSortType = 'daily' | 'realtime';
 
-function sortRankingsForDaily(rankings: KeywordRanking[]): KeywordRanking[] {
-  const sorted = [...rankings].sort((a, b) => (b.score24h ?? b.score ?? 0) - (a.score24h ?? a.score ?? 0));
-  return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
+/** API `rank`(오름차순) 기준 정렬. rank 없음은 맨 뒤로. */
+function sortRankingsByRank(rankings: KeywordRanking[]): KeywordRanking[] {
+  return [...rankings].sort((a, b) => {
+    const ra = typeof a.rank === 'number' ? a.rank : Number.POSITIVE_INFINITY;
+    const rb = typeof b.rank === 'number' ? b.rank : Number.POSITIVE_INFINITY;
+    return ra - rb;
+  });
+}
+
+function readFinalScore(r: KeywordRanking): number {
+  if (typeof r.finalScore === 'number' && !Number.isNaN(r.finalScore)) return r.finalScore;
+  if (typeof r.final_score === 'number' && !Number.isNaN(r.final_score)) return r.final_score;
+  return Number.NEGATIVE_INFINITY;
+}
+
+/** 실시간: `finalScore`(또는 API `final_score`) 내림차순. 없으면 맨 뒤. 표시 `rank`는 1..n으로 맞춤. */
+function sortRankingsByFinalScore(rankings: KeywordRanking[]): KeywordRanking[] {
+  const scored = rankings.map((r, i) => ({ r, i }));
+  scored.sort((a, b) => {
+    const fa = readFinalScore(a.r);
+    const fb = readFinalScore(b.r);
+    if (fb !== fa) return fb - fa;
+    return a.i - b.i;
+  });
+  return scored.map(({ r }, idx) => ({ ...r, rank: idx + 1 }));
 }
 
 function transformRankingsToTrendItems(
@@ -183,10 +205,10 @@ export function useTrendSplit(selectedCategory: Category) {
   const { dailyData, realtimeData } = useMemo(() => {
     const daily = dailyError || !dailyRankings?.length
       ? []
-      : transformRankingsToTrendItems(sortRankingsForDaily(dailyRankings), selectedCategory);
+      : transformRankingsToTrendItems(sortRankingsByRank(dailyRankings), selectedCategory);
     const realtime = realtimeError || !realtimeRankings?.length
       ? []
-      : transformRankingsToTrendItems(realtimeRankings, selectedCategory);
+      : transformRankingsToTrendItems(sortRankingsByFinalScore(realtimeRankings), selectedCategory);
     return { dailyData: daily, realtimeData: realtime };
   }, [dailyRankings, dailyError, realtimeRankings, realtimeError, selectedCategory]);
 

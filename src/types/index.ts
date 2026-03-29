@@ -36,6 +36,10 @@ export interface KeywordRanking {
   scoreRecent: number;  // 가장 최근 구간 점수
   scorePrev: number;    // 직전 구간 점수
   diffScore: number;    // scoreRecent - scorePrev 등의 변화량
+  /** 실시간 랭킹 등 API가 내려주는 최종 점수 */
+  finalScore?: number;
+  /** 일부 API는 snake_case로 전달 */
+  final_score?: number;
   articles?: string[];
 }
 
