@@ -8,7 +8,7 @@ interface TrendListSplitProps {
   dailyData: TrendItemType[];
   realtimeData: TrendItemType[];
   selectedItem: TrendItemType | null;
-  onItemClick: (item: TrendItemType) => void;
+  onItemClick: (item: TrendItemType | null) => void;
   loading?: boolean;
   error?: Error | null;
 }
@@ -16,6 +16,8 @@ interface TrendListSplitProps {
 type TabType = 'daily' | 'realtime';
 
 const TAB_PARAM = 'tab';
+/** 상세 패널 키워드 — 공유·북마크·뒤로가기·analytics(location.search) 연동 */
+const KW_PARAM = 'kw';
 
 function parseTabFromSearch(search: string): TabType {
   const params = new URLSearchParams(search);
@@ -34,6 +36,55 @@ export default function TrendListSplit({
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseTabFromSearch(searchParams.toString());
+  const kwFromUrl = searchParams.get(KW_PARAM);
+
+  /* URL ↔ 선택 키워드 동기화 (딥링크, 브라우저 뒤로가기, 탭 전환) */
+  useEffect(() => {
+    if (!kwFromUrl) {
+      if (selectedItem !== null) onItemClick(null);
+      return;
+    }
+
+    const list = activeTab === 'daily' ? dailyData : realtimeData;
+    if (loading) return;
+
+    const found = list.find(i => (i.originalKeyword || i.keyword) === kwFromUrl);
+    if (found) {
+      const key = found.originalKeyword || found.keyword;
+      const selKey = selectedItem ? (selectedItem.originalKeyword || selectedItem.keyword) : null;
+      if (selKey !== key || selectedItem?.trendType !== activeTab) {
+        onItemClick({ ...found, trendType: activeTab });
+      }
+      return;
+    }
+
+    if (selectedItem !== null) onItemClick(null);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete(KW_PARAM);
+      return next;
+    });
+  }, [
+    kwFromUrl,
+    activeTab,
+    dailyData,
+    realtimeData,
+    loading,
+    selectedItem,
+    onItemClick,
+    setSearchParams,
+  ]);
+
+  const handleItemSelect = (item: TrendItemType) => {
+    const key = item.originalKeyword || item.keyword;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set(KW_PARAM, key);
+      if (activeTab === 'daily') next.delete(TAB_PARAM);
+      else next.set(TAB_PARAM, activeTab);
+      return next;
+    });
+  };
 
   /* 단일 열(모바일)에서만: 목록 항목 선택 후 상세 패널이 보이도록 스크롤 */
   useEffect(() => {
@@ -125,7 +176,7 @@ export default function TrendListSplit({
                         key={`${item.id}-${item.rank}-${activeTab}`}
                         item={item}
                         index={idx}
-                        onClick={() => onItemClick({ ...item, trendType: activeTab })}
+                        onClick={() => handleItemSelect({ ...item, trendType: activeTab })}
                         isSelected={
                           selectedItem &&
                           (selectedItem.originalKeyword || selectedItem.keyword) === (item.originalKeyword || item.keyword)

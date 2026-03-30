@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Footer from '@/components/layout/Footer';
 import ScrollToTopButton from '@/components/layout/ScrollToTopButton';
@@ -206,7 +207,11 @@ const mockSuggestions: SearchSuggestion[] = [
   { keyword: '실형' },
 ];
 
+/** 트렌드 메인과 동일: 공유·북마크·뒤로가기·analytics(location.search) */
+const KW_PARAM = 'kw';
+
 export default function DataReportTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -220,6 +225,18 @@ export default function DataReportTab() {
   const [error, setError] = useState<Error | null>(null);
   const [searchNotFound, setSearchNotFound] = useState(false);
   const [similarKeywords, setSimilarKeywords] = useState<KeywordData[]>([]);
+
+  const setKwInUrl = useCallback(
+    (keyword: string | null) => {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        if (keyword) next.set(KW_PARAM, keyword);
+        else next.delete(KW_PARAM);
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
 
   // 랭킹 데이터 가져오기
   useEffect(() => {
@@ -366,6 +383,7 @@ export default function DataReportTab() {
   const handleKeywordSelect = async (keywordData: KeywordData, fromTopKeywords: boolean = false) => {
     if (!keywordData.id) {
       setSelectedKeyword(keywordData);
+      setKwInUrl(keywordData.keyword);
       return;
     }
     
@@ -448,9 +466,11 @@ export default function DataReportTab() {
         relatedKeywords: relatedKeywordsList,
         articles: articlesList,
       });
+      setKwInUrl(keywordData.keyword);
     } catch (err) {
       console.error('키워드 상세 데이터 로드 실패:', err);
       setSelectedKeyword(keywordData); // 기본 데이터라도 표시
+      setKwInUrl(keywordData.keyword);
     } finally {
       setLoading(false);
     }
@@ -460,6 +480,7 @@ export default function DataReportTab() {
     // 먼저 로컬 랭킹에서 확인
     const found = keywords.find(k => k.keyword.toLowerCase() === keyword.toLowerCase());
     if (found) {
+      setKwInUrl(found.keyword);
       handleKeywordSelect(found);
       setSearchQuery(keyword);
       setShowSuggestions(false);
@@ -472,7 +493,8 @@ export default function DataReportTab() {
     setLoading(true);
     setSearchQuery(keyword);
     setShowSuggestions(false);
-    
+    setKwInUrl(keyword.trim());
+
     try {
       const searchResults = await searchKeyword(keyword);
       
@@ -522,8 +544,12 @@ export default function DataReportTab() {
             url: article.url,
           })),
         };
-        
+
+        const locKw = new URLSearchParams(window.location.search).get(KW_PARAM)?.trim();
+        if (!locKw) return;
+
         setSelectedKeyword(keywordData);
+        setKwInUrl(keywordData.keyword);
         setSearchNotFound(false);
         
         // 여러 결과가 있으면 나머지를 유사 검색어로 표시
@@ -564,16 +590,56 @@ export default function DataReportTab() {
         setSearchNotFound(true);
         setSimilarKeywords([]);
         setSelectedKeyword(null);
+        setKwInUrl(null);
       }
     } catch (error) {
       console.error('키워드 검색 실패:', error);
       setSearchNotFound(true);
       setSimilarKeywords([]);
       setSelectedKeyword(null);
+      setKwInUrl(null);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleKeywordSelectRef = useRef(handleKeywordSelect);
+  const handleSearchRef = useRef(handleSearch);
+  handleKeywordSelectRef.current = handleKeywordSelect;
+  handleSearchRef.current = handleSearch;
+
+  const kwFromUrl = searchParams.get(KW_PARAM);
+
+  useEffect(() => {
+    if (!kwFromUrl?.trim()) {
+      if (selectedKeyword != null) {
+        setSelectedKeyword(null);
+        setSearchNotFound(false);
+        setSimilarKeywords([]);
+        setSearchQuery('');
+      }
+      return;
+    }
+
+    const normalized = kwFromUrl.trim();
+    if (selectedKeyword?.keyword.toLowerCase() === normalized.toLowerCase()) {
+      return;
+    }
+
+    if (loading && keywords.length === 0) return;
+
+    const fromList = keywords.find(
+      k => k.keyword.toLowerCase() === normalized.toLowerCase(),
+    );
+    if (fromList) {
+      void handleKeywordSelectRef.current(fromList, true);
+      return;
+    }
+
+    if (loading) return;
+
+    void handleSearchRef.current(normalized);
+  }, [kwFromUrl, keywords, loading, selectedKeyword]);
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -790,7 +856,7 @@ export default function DataReportTab() {
                   keywords.map((keyword, idx) => (
                     <button
                       key={keyword.id || keyword.rank}
-                      onClick={() => handleKeywordSelect(keyword, true)}
+                      onClick={() => setKwInUrl(keyword.keyword)}
                     className={`group w-full text-left p-5 rounded-2xl border transition-all flex items-center gap-6 ${
                       selectedKeyword?.rank === keyword.rank
                         ? 'bg-teal-50 border-teal-300 shadow-md'
@@ -1165,6 +1231,7 @@ export default function DataReportTab() {
                               await handleKeywordSelect(keyword);
                               setSearchNotFound(false);
                               setSearchQuery(keyword.keyword);
+                              setKwInUrl(keyword.keyword);
                             }}
                             className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 hover:text-teal-800 rounded-full text-sm font-medium transition-colors border border-teal-200"
                           >
