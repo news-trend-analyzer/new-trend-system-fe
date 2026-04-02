@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { TrendItem as TrendItemType } from '@/types';
 import TrendItem from './TrendItem';
 import TrendDetailPanel from './TrendDetailPanel';
@@ -19,6 +19,10 @@ const TAB_PARAM = 'tab';
 /** 상세 패널 키워드 — 공유·북마크·뒤로가기·analytics(location.search) 연동 */
 const KW_PARAM = 'kw';
 
+function toKeywordSlug(keyword: string): string {
+  return encodeURIComponent(keyword.trim().toLowerCase());
+}
+
 function parseTabFromSearch(search: string): TabType {
   const params = new URLSearchParams(search);
   const t = params.get(TAB_PARAM)?.toLowerCase();
@@ -35,11 +39,16 @@ export default function TrendListSplit({
 }: TrendListSplitProps) {
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const activeTab = parseTabFromSearch(searchParams.toString());
   const kwFromUrl = searchParams.get(KW_PARAM);
+  const isKeywordRoute = location.pathname.startsWith('/keyword/');
 
   /* URL ↔ 선택 키워드 동기화 (딥링크, 브라우저 뒤로가기, 탭 전환) */
   useEffect(() => {
+    if (isKeywordRoute) return;
+
     if (!kwFromUrl) {
       if (selectedItem !== null) onItemClick(null);
       return;
@@ -73,17 +82,14 @@ export default function TrendListSplit({
     selectedItem,
     onItemClick,
     setSearchParams,
+    isKeywordRoute,
   ]);
 
   const handleItemSelect = (item: TrendItemType) => {
     const key = item.originalKeyword || item.keyword;
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      next.set(KW_PARAM, key);
-      if (activeTab === 'daily') next.delete(TAB_PARAM);
-      else next.set(TAB_PARAM, activeTab);
-      return next;
-    });
+    onItemClick({ ...item, trendType: activeTab });
+    const query = activeTab === 'realtime' ? '?tab=realtime' : '';
+    navigate(`/keyword/${toKeywordSlug(key)}${query}`);
   };
 
   /* 단일 열(모바일)에서만: 목록 항목 선택 후 상세 패널이 보이도록 스크롤 */

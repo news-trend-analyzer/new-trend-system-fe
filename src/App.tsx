@@ -17,10 +17,15 @@ const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = 
   '/privacy': { slug: 'privacy', documentLabel: '개인정보처리방침' },
 };
 
+function toKeywordSlug(keyword: string): string {
+  return encodeURIComponent(keyword.trim().toLowerCase());
+}
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isReportPage = location.pathname === '/report';
+  const isKeywordPage = location.pathname.startsWith('/keyword/');
   const legalPage = LEGAL_PAGE_MAP[location.pathname];
 
   const [selectedItem, setSelectedItem] = useState<TrendItem | null>(null);
@@ -30,6 +35,7 @@ export default function App() {
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
   const { dailyData, realtimeData, loading, error } = useTrendSplit('전체');
+  const keywordSlug = isKeywordPage ? location.pathname.replace('/keyword/', '') : '';
 
   const gaFirstLoadRef = useRef(true);
   useEffect(() => {
@@ -53,6 +59,36 @@ export default function App() {
   }, [location.pathname]);
 
   const keywords = [...dailyData, ...realtimeData].map(item => item.keyword).filter(Boolean);
+
+  useEffect(() => {
+    if (!isKeywordPage) return;
+    if (loading) return;
+
+    const allItems: TrendItem[] = [
+      ...dailyData.map(item => ({ ...item, trendType: 'daily' as const })),
+      ...realtimeData.map(item => ({ ...item, trendType: 'realtime' as const })),
+    ];
+
+    const found = allItems.find(item => {
+      const key = item.originalKeyword || item.keyword;
+      return toKeywordSlug(key) === keywordSlug;
+    });
+
+    if (found) {
+      setSelectedItem(found);
+      return;
+    }
+
+    setSelectedItem(null);
+  }, [isKeywordPage, keywordSlug, loading, dailyData, realtimeData]);
+
+  useEffect(() => {
+    if (isKeywordPage && selectedItem) {
+      document.title = `${selectedItem.keyword} - TREN:D LAB`;
+      return;
+    }
+    document.title = 'TREN:D LAB - 뉴스 트렌드 시스템';
+  }, [isKeywordPage, selectedItem]);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
     setSearchQuery(query);
@@ -80,7 +116,7 @@ export default function App() {
         </>
       ) : (
         <>
-          <HeroSection onSearch={handleSearch} />
+          {!isKeywordPage && <HeroSection onSearch={handleSearch} />}
           <div className="flex-1">
             {isSearchMode ? (
               <div>
