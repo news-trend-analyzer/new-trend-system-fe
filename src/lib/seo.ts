@@ -17,6 +17,19 @@ function truncateMeta(text: string, max = 160): string {
   return `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
+/** 메타 설명용 — AI 요약에 섞인 가벼운 마크다운 제거 */
+function stripMarkdownLight(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/#{1,6}\s?/gm, '')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function ensureMeta(attr: 'name' | 'property', key: string, content: string) {
   const metas = document.head.querySelectorAll('meta');
   for (const m of metas) {
@@ -69,11 +82,10 @@ export function applyKeywordPageSeo(params: { keyword: string; description: stri
   const path = params.pagePath.startsWith('/') ? params.pagePath : `/${params.pagePath}`;
   const pageUrl = `${site}${path}`;
   const title = `${params.keyword} - TREN:D LAB`;
-  const desc = truncateMeta(
+  const rawDesc =
     params.description?.trim() ||
-      `「${params.keyword}」 실시간 뉴스 트렌드와 관련 기사를 TREN:D LAB에서 확인하세요.`,
-    160,
-  );
+    `「${params.keyword}」 실시간 뉴스 트렌드와 관련 기사를 TREN:D LAB에서 확인하세요.`;
+  const desc = truncateMeta(stripMarkdownLight(rawDesc), 160);
 
   document.title = title;
 

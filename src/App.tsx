@@ -23,6 +23,10 @@ function toKeywordSlug(keyword: string): string {
   return encodeURIComponent(keyword.trim().toLowerCase());
 }
 
+function isPlaceholderScoreDescription(d: string): boolean {
+  return /^Score:\s*[\d.,]+점?$/.test(d.trim());
+}
+
 /** 랭킹 밖 키워드 — URL의 keywordId로 상세 API만으로 패널 표시 */
 function buildFallbackTrendItem(
   keywordId: string,
@@ -143,15 +147,34 @@ export default function App() {
       return;
     }
     if (loading || keywordResolvePending) return;
-    if (selectedItem) {
-      applyKeywordPageSeo({
-        keyword: selectedItem.keyword,
-        description: selectedItem.description,
-        pagePath: location.pathname,
-      });
+    if (!selectedItem) {
+      resetDefaultSeo();
       return;
     }
-    resetDefaultSeo();
+
+    let cancelled = false;
+
+    void (async () => {
+      const insight = await fetchKeywordInsight(String(selectedItem.id));
+      if (cancelled) return;
+
+      const summary = insight?.summary?.trim() ?? '';
+      const fallbackFromItem = selectedItem.description?.trim() ?? '';
+      const description =
+        summary ||
+        (fallbackFromItem && !isPlaceholderScoreDescription(fallbackFromItem) ? fallbackFromItem : '') ||
+        `「${selectedItem.keyword}」 관련 실시간 뉴스 트렌드와 기사를 TREN:D LAB에서 확인하세요.`;
+
+      applyKeywordPageSeo({
+        keyword: selectedItem.keyword,
+        description,
+        pagePath: location.pathname,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isKeywordPage, selectedItem, loading, keywordResolvePending, location.pathname]);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
