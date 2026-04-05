@@ -1,4 +1,5 @@
 type TrendItem = {
+  id?: string | number;
   keyword?: string;
   query?: string;
   name?: string;
@@ -35,7 +36,8 @@ function extractKeyword(item: TrendItem): string {
   return (item.keyword || item.query || item.name || item.normalizedText || '').trim();
 }
 
-async function fetchTrendKeywords(apiBase: string, apiKey?: string): Promise<string[]> {
+/** 키워드 URL — id 우선(안정 링크), id 없으면 슬러그 */
+async function fetchTrendKeywordLocs(apiBase: string, apiKey?: string): Promise<string[]> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (apiKey) {
     headers['X-API-Key'] = apiKey;
@@ -46,7 +48,7 @@ async function fetchTrendKeywords(apiBase: string, apiKey?: string): Promise<str
     fetch(`${apiBase}/trend/realtime?limit=100`, { method: 'GET', headers }),
   ]);
 
-  const merged: string[] = [];
+  const merged: { id: string | null; keyword: string }[] = [];
 
   const collect = async (result: PromiseSettledResult<Response>) => {
     if (result.status !== 'fulfilled' || !result.value.ok) return;
@@ -54,14 +56,26 @@ async function fetchTrendKeywords(apiBase: string, apiKey?: string): Promise<str
     const rows = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
     for (const row of rows as TrendItem[]) {
       const keyword = extractKeyword(row);
-      if (keyword) merged.push(keyword);
+      if (!keyword) continue;
+      const id = row.id != null && String(row.id).trim() !== '' ? String(row.id) : null;
+      merged.push({ id, keyword });
     }
   };
 
   await Promise.all([collect(dailyRes), collect(realtimeRes)]);
 
-  const unique = Array.from(new Set(merged));
-  return unique.slice(0, KEYWORD_LIMIT);
+  const seen = new Set<string>();
+  const locs: string[] = [];
+  for (const e of merged) {
+    const loc = e.id
+      ? `${SITE_URL}/keyword/${encodeURIComponent(e.id)}`
+      : `${SITE_URL}/keyword/${toKeywordSlug(e.keyword)}`;
+    if (seen.has(loc)) continue;
+    seen.add(loc);
+    locs.push(loc);
+    if (locs.length >= KEYWORD_LIMIT) break;
+  }
+  return locs;
 }
 
 export default async function handler(_req: any, res: any): Promise<void> {
@@ -75,11 +89,11 @@ export default async function handler(_req: any, res: any): Promise<void> {
   };
   const nowIso = new Date().toISOString();
 
-  let keywords: string[] = [];
+  let keywordLocs: string[] = [];
   try {
-    keywords = await fetchTrendKeywords(config.apiBase, config.apiKey);
+    keywordLocs = await fetchTrendKeywordLocs(config.apiBase, config.apiKey);
   } catch {
-    keywords = [];
+    keywordLocs = [];
   }
 
   const staticUrls = [
@@ -89,8 +103,8 @@ export default async function handler(_req: any, res: any): Promise<void> {
     { loc: `${SITE_URL}/privacy`, changefreq: 'monthly', priority: '0.3' },
   ];
 
-  const keywordUrls = keywords.map((keyword) => ({
-    loc: `${SITE_URL}/keyword/${toKeywordSlug(keyword)}`,
+  const keywordUrls = keywordLocs.map((loc) => ({
+    loc,
     changefreq: 'hourly',
     priority: '0.7',
   }));

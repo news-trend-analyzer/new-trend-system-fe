@@ -11,6 +11,9 @@ interface TrendListSplitProps {
   onItemClick: (item: TrendItemType | null) => void;
   loading?: boolean;
   error?: Error | null;
+  /** /keyword/:id 딥링크 로딩·실패 시 패널 문구 */
+  keywordDeepLinkLoading?: boolean;
+  keywordDeepLinkNotFound?: boolean;
 }
 
 type TabType = 'daily' | 'realtime';
@@ -18,10 +21,6 @@ type TabType = 'daily' | 'realtime';
 const TAB_PARAM = 'tab';
 /** 상세 패널 키워드 — 공유·북마크·뒤로가기·analytics(location.search) 연동 */
 const KW_PARAM = 'kw';
-
-function toKeywordSlug(keyword: string): string {
-  return encodeURIComponent(keyword.trim().toLowerCase());
-}
 
 function parseTabFromSearch(search: string): TabType {
   const params = new URLSearchParams(search);
@@ -36,6 +35,8 @@ export default function TrendListSplit({
   onItemClick,
   loading = false,
   error = null,
+  keywordDeepLinkLoading = false,
+  keywordDeepLinkNotFound = false,
 }: TrendListSplitProps) {
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,10 +87,9 @@ export default function TrendListSplit({
   ]);
 
   const handleItemSelect = (item: TrendItemType) => {
-    const key = item.originalKeyword || item.keyword;
     onItemClick({ ...item, trendType: activeTab });
     const query = activeTab === 'realtime' ? '?tab=realtime' : '';
-    navigate(`/keyword/${toKeywordSlug(key)}${query}`);
+    navigate(`/keyword/${encodeURIComponent(String(item.id))}${query}`);
   };
 
   /* 단일 열(모바일)에서만: 목록 항목 선택 후 상세 패널이 보이도록 스크롤 */
@@ -184,8 +184,10 @@ export default function TrendListSplit({
                         index={idx}
                         onClick={() => handleItemSelect({ ...item, trendType: activeTab })}
                         isSelected={
-                          selectedItem &&
-                          (selectedItem.originalKeyword || selectedItem.keyword) === (item.originalKeyword || item.keyword)
+                          !!selectedItem &&
+                          (String(selectedItem.id) === String(item.id) ||
+                            (selectedItem.originalKeyword || selectedItem.keyword) ===
+                              (item.originalKeyword || item.keyword))
                         }
                       />
                     ))}
@@ -202,7 +204,11 @@ export default function TrendListSplit({
               selectedItem ? 'min-h-[400px]' : ''
             }`}
           >
-            <TrendDetailPanel item={selectedItem} />
+            <TrendDetailPanel
+              item={selectedItem}
+              deepLinkLoading={keywordDeepLinkLoading}
+              deepLinkNotFound={keywordDeepLinkNotFound}
+            />
           </div>
         </div>
       )}

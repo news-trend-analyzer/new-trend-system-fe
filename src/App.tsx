@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { TrendItem, SearchResultResponse } from '@/types';
 import Navigation from '@/components/layout/Navigation';
@@ -12,6 +12,7 @@ import LegalMarkdownPage from '@/pages/LegalMarkdownPage';
 import { sendGtagPageView } from '@/lib/analytics';
 import { applyKeywordPageSeo, resetDefaultSeo } from '@/lib/seo';
 import { useTrendSplit } from '@/hooks/useTrendFilter';
+import { fetchKeywordInsight } from '@/utils/api';
 
 const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = {
   '/terms': { slug: 'terms', documentLabel: '이용약관' },
@@ -20,6 +21,27 @@ const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = 
 
 function toKeywordSlug(keyword: string): string {
   return encodeURIComponent(keyword.trim().toLowerCase());
+}
+
+/** 랭킹 밖 키워드 — URL의 keywordId로 상세 API만으로 패널 표시 */
+function buildFallbackTrendItem(
+  keywordId: string,
+  keyword: string,
+  summary: string | null | undefined,
+): TrendItem {
+  const desc = (summary && summary.trim()) || `${keyword}에 대한 실시간 뉴스 트렌드와 관련 기사입니다.`;
+  return {
+    id: keywordId,
+    rank: 0,
+    keyword,
+    originalKeyword: keyword,
+    category: '전체',
+    description: desc.length > 220 ? `${desc.slice(0, 217)}…` : desc,
+    status: 'same',
+    trendData: [0, 0, 0, 0, 0, 0],
+    articles: [],
+    trendType: 'daily',
+  };
 }
 
 export default function App() {
@@ -34,9 +56,10 @@ export default function App() {
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 10 });
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [keywordResolvePending, setKeywordResolvePending] = useState(false);
 
   const { dailyData, realtimeData, loading, error } = useTrendSplit('전체');
-  const keywordSlug = isKeywordPage ? location.pathname.replace('/keyword/', '') : '';
+  const keywordSlug = isKeywordPage ? location.pathname.replace('/keyword/', '').replace(/\/$/, '') : '';
 
   const gaFirstLoadRef = useRef(true);
   useEffect(() => {
@@ -61,26 +84,57 @@ export default function App() {
 
   const keywords = [...dailyData, ...realtimeData].map(item => item.keyword).filter(Boolean);
 
-  useEffect(() => {
-    if (!isKeywordPage) return;
+  useLayoutEffect(() => {
+    if (!isKeywordPage) {
+      setKeywordResolvePending(false);
+      return;
+    }
     if (loading) return;
+
+    let decodedSegment: string;
+    try {
+      decodedSegment = decodeURIComponent(keywordSlug);
+    } catch {
+      decodedSegment = keywordSlug;
+    }
 
     const allItems: TrendItem[] = [
       ...dailyData.map(item => ({ ...item, trendType: 'daily' as const })),
       ...realtimeData.map(item => ({ ...item, trendType: 'realtime' as const })),
     ];
 
-    const found = allItems.find(item => {
+    const fromList = allItems.find(item => {
       const key = item.originalKeyword || item.keyword;
-      return toKeywordSlug(key) === keywordSlug;
+      if (String(item.id) === decodedSegment) return true;
+      if (toKeywordSlug(key) === keywordSlug) return true;
+      if (toKeywordSlug(key) === toKeywordSlug(decodedSegment)) return true;
+      return false;
     });
 
-    if (found) {
-      setSelectedItem(found);
+    if (fromList) {
+      setKeywordResolvePending(false);
+      setSelectedItem(fromList);
       return;
     }
 
+    let cancelled = false;
+    setKeywordResolvePending(true);
     setSelectedItem(null);
+
+    void (async () => {
+      const insight = await fetchKeywordInsight(decodedSegment.trim());
+      if (cancelled) return;
+      setKeywordResolvePending(false);
+      if (insight?.keyword) {
+        setSelectedItem(buildFallbackTrendItem(decodedSegment.trim(), insight.keyword, insight.summary));
+      } else {
+        setSelectedItem(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isKeywordPage, keywordSlug, loading, dailyData, realtimeData]);
 
   useEffect(() => {
@@ -88,7 +142,7 @@ export default function App() {
       resetDefaultSeo();
       return;
     }
-    if (loading) return;
+    if (loading || keywordResolvePending) return;
     if (selectedItem) {
       applyKeywordPageSeo({
         keyword: selectedItem.keyword,
@@ -98,7 +152,7 @@ export default function App() {
       return;
     }
     resetDefaultSeo();
-  }, [isKeywordPage, selectedItem, loading, location.pathname]);
+  }, [isKeywordPage, selectedItem, loading, keywordResolvePending, location.pathname]);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
     setSearchQuery(query);
@@ -155,6 +209,8 @@ export default function App() {
                 onItemClick={setSelectedItem}
                 loading={loading}
                 error={error}
+                keywordDeepLinkLoading={isKeywordPage && (loading || keywordResolvePending)}
+                keywordDeepLinkNotFound={isKeywordPage && !loading && !keywordResolvePending && !selectedItem}
               />
             )}
           </div>

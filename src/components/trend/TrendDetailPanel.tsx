@@ -6,6 +6,10 @@ import remarkGfm from 'remark-gfm';
 
 interface TrendDetailPanelProps {
   item: TrendItem | null;
+  /** /keyword/:id 진입 시 랭킹·인사이트 조회 중 */
+  deepLinkLoading?: boolean;
+  /** ID·슬러그 모두 매칭 실패 */
+  deepLinkNotFound?: boolean;
 }
 
 const formatDate = (dateString: string): string => {
@@ -156,7 +160,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange, disabled = false }:
   );
 };
 
-export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
+export default function TrendDetailPanel({
+  item,
+  deepLinkLoading = false,
+  deepLinkNotFound = false,
+}: TrendDetailPanelProps) {
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 5 });
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -242,6 +250,31 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
   }, [item, currentPage]);
 
   if (!item) {
+    if (deepLinkLoading) {
+      return (
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300 min-h-[400px]">
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-teal-500 border-t-transparent mb-3" />
+            <p className="text-slate-600 text-sm">키워드 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      );
+    }
+    if (deepLinkNotFound) {
+      return (
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300 min-h-[400px]">
+          <div className="flex flex-col items-center justify-start pt-10 pb-10 px-10 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
+              <i className="ri-error-warning-line text-3xl text-amber-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">키워드를 찾을 수 없습니다</h3>
+            <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
+              링크가 만료되었거나 잘못되었을 수 있습니다. 왼쪽 랭킹에서 다른 키워드를 선택해 보세요.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300">
         <div className="flex flex-col items-center justify-start pt-8 pb-10 px-10 text-center">
