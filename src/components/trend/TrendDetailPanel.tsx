@@ -278,7 +278,7 @@ export default function TrendDetailPanel({ item }: TrendDetailPanelProps) {
     <div className="min-h-[400px] flex flex-col overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 transition-all duration-300">
       <div className="h-14 flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-400 pl-6 pr-5 text-white shrink-0">
         <div className="text-teal-100 font-semibold text-sm shrink-0">랭킹 #{item.rank}</div>
-        <h2 className="text-base font-bold line-clamp-1 break-words flex-1 min-w-0">{item.keyword}</h2>
+        <h1 className="text-base font-bold line-clamp-1 break-words flex-1 min-w-0">{item.keyword}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">

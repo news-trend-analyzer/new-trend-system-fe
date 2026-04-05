@@ -10,6 +10,7 @@ import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
 import LegalMarkdownPage from '@/pages/LegalMarkdownPage';
 import { sendGtagPageView } from '@/lib/analytics';
+import { applyKeywordPageSeo, resetDefaultSeo } from '@/lib/seo';
 import { useTrendSplit } from '@/hooks/useTrendFilter';
 
 const LEGAL_PAGE_MAP: Record<string, { slug: string; documentLabel: string }> = {
@@ -83,12 +84,21 @@ export default function App() {
   }, [isKeywordPage, keywordSlug, loading, dailyData, realtimeData]);
 
   useEffect(() => {
-    if (isKeywordPage && selectedItem) {
-      document.title = `${selectedItem.keyword} - TREN:D LAB`;
+    if (!isKeywordPage) {
+      resetDefaultSeo();
       return;
     }
-    document.title = 'TREN:D LAB - 뉴스 트렌드 시스템';
-  }, [isKeywordPage, selectedItem]);
+    if (loading) return;
+    if (selectedItem) {
+      applyKeywordPageSeo({
+        keyword: selectedItem.keyword,
+        description: selectedItem.description,
+        pagePath: location.pathname,
+      });
+      return;
+    }
+    resetDefaultSeo();
+  }, [isKeywordPage, selectedItem, loading, location.pathname]);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
     setSearchQuery(query);

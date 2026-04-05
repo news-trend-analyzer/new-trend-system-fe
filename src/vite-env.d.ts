@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_SEARCH_API_BASE_URL?: string;
+  /** 공개 사이트 origin (canonical·OG URL). 미설정 시 https://trendlab.dev */
+  readonly VITE_SITE_URL?: string;
   readonly MODE: string;
   readonly DEV: boolean;
   readonly PROD: boolean;
