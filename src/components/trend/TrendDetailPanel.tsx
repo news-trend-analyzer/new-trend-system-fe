@@ -173,15 +173,17 @@ export default function TrendDetailPanel({
   const [isInsightLoading, setIsInsightLoading] = useState(false);
   const pageSize = 5;
   const isRealtimeItem = item?.trendType === 'realtime';
+  /** item 전체가 아니라 id로 의존 — 클릭 직후·URL 동기화 등으로 같은 키워드 객체가 새 참조로 들어와도 API 중복 호출 방지 */
+  const itemKeywordId = item?.id != null ? String(item.id) : null;
 
   useEffect(() => {
-    if (item) {
+    if (itemKeywordId) {
       setCurrentPage(1);
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       setKeywordInsight('');
       setInsightKeyword('');
     }
-  }, [item]);
+  }, [itemKeywordId]);
 
   useEffect(() => {
     if (isRealtimeItem) {
@@ -191,11 +193,11 @@ export default function TrendDetailPanel({
       return;
     }
 
-    if (item?.id) {
+    if (itemKeywordId) {
       let cancelled = false;
       setIsInsightLoading(true);
 
-      fetchKeywordInsight(String(item.id))
+      fetchKeywordInsight(itemKeywordId)
         .then((insightData) => {
           if (!cancelled) {
             setInsightKeyword(insightData?.keyword ?? '');
@@ -220,10 +222,10 @@ export default function TrendDetailPanel({
     setInsightKeyword('');
     setKeywordInsight('');
     setIsInsightLoading(false);
-  }, [item, isRealtimeItem]);
+  }, [itemKeywordId, isRealtimeItem]);
 
   useEffect(() => {
-    if (item?.id) {
+    if (itemKeywordId) {
       let cancelled = false;
       if (currentPage > 1 && searchResponse.items.length > 0) {
         setIsLoading(true);
@@ -232,7 +234,7 @@ export default function TrendDetailPanel({
         setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       }
 
-      searchArticlesByKeyword(String(item.id), currentPage, pageSize)
+      searchArticlesByKeyword(itemKeywordId, currentPage, pageSize)
         .then((response) => {
           if (!cancelled) setSearchResponse(response);
         })
@@ -247,7 +249,7 @@ export default function TrendDetailPanel({
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       setIsLoading(false);
     }
-  }, [item, currentPage]);
+  }, [itemKeywordId, currentPage]);
 
   if (!item) {
     if (deepLinkLoading) {
