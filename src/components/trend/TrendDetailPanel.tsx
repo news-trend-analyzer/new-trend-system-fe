@@ -1,8 +1,14 @@
-import { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { TrendItem, SearchResult, SearchResultResponse } from '@/types';
 import { fetchKeywordInsight, searchArticlesByKeyword } from '@/utils/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+export type KeywordInsightSeoPayload = {
+  keywordId: string;
+  /** 메타 설명용 — null이면 App에서 폴백 문구로 채움 */
+  summary: string | null;
+};
 
 interface TrendDetailPanelProps {
   item: TrendItem | null;
@@ -10,6 +16,8 @@ interface TrendDetailPanelProps {
   deepLinkLoading?: boolean;
   /** ID·슬러그 모두 매칭 실패 */
   deepLinkNotFound?: boolean;
+  /** 인사이트 로드 후 메타/OG용 (패널에서 API 1회만 호출, App은 재요청 없음) */
+  onKeywordInsightForSeo?: (payload: KeywordInsightSeoPayload) => void;
 }
 
 const formatDate = (dateString: string): string => {
@@ -164,7 +172,11 @@ export default function TrendDetailPanel({
   item,
   deepLinkLoading = false,
   deepLinkNotFound = false,
+  onKeywordInsightForSeo,
 }: TrendDetailPanelProps) {
+  const onKeywordInsightForSeoRef = useRef(onKeywordInsightForSeo);
+  onKeywordInsightForSeoRef.current = onKeywordInsightForSeo;
+
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 5 });
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -190,6 +202,9 @@ export default function TrendDetailPanel({
       setInsightKeyword('');
       setKeywordInsight('');
       setIsInsightLoading(false);
+      if (itemKeywordId) {
+        onKeywordInsightForSeoRef.current?.({ keywordId: itemKeywordId, summary: null });
+      }
       return;
     }
 
@@ -202,12 +217,18 @@ export default function TrendDetailPanel({
           if (!cancelled) {
             setInsightKeyword(insightData?.keyword ?? '');
             setKeywordInsight(insightData?.summary ?? '');
+            const raw = insightData?.summary?.trim();
+            onKeywordInsightForSeoRef.current?.({
+              keywordId: itemKeywordId,
+              summary: raw && raw.length > 0 ? raw : null,
+            });
           }
         })
         .catch(() => {
           if (!cancelled) {
             setInsightKeyword('');
             setKeywordInsight('');
+            onKeywordInsightForSeoRef.current?.({ keywordId: itemKeywordId, summary: null });
           }
         })
         .finally(() => {

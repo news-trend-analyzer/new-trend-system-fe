@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { TrendItem as TrendItemType } from '@/types';
 import TrendItem from './TrendItem';
-import TrendDetailPanel from './TrendDetailPanel';
+import TrendDetailPanel, { type KeywordInsightSeoPayload } from './TrendDetailPanel';
 
 interface TrendListSplitProps {
   dailyData: TrendItemType[];
@@ -14,6 +14,7 @@ interface TrendListSplitProps {
   /** /keyword/:id 딥링크 로딩·실패 시 패널 문구 */
   keywordDeepLinkLoading?: boolean;
   keywordDeepLinkNotFound?: boolean;
+  onKeywordInsightForSeo?: (payload: KeywordInsightSeoPayload) => void;
 }
 
 type TabType = 'daily' | 'realtime';
@@ -37,6 +38,7 @@ export default function TrendListSplit({
   error = null,
   keywordDeepLinkLoading = false,
   keywordDeepLinkNotFound = false,
+  onKeywordInsightForSeo,
 }: TrendListSplitProps) {
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -208,6 +210,7 @@ export default function TrendListSplit({
               item={selectedItem}
               deepLinkLoading={keywordDeepLinkLoading}
               deepLinkNotFound={keywordDeepLinkNotFound}
+              onKeywordInsightForSeo={onKeywordInsightForSeo}
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { TrendItem, SearchResultResponse } from '@/types';
 import Navigation from '@/components/layout/Navigation';
@@ -6,6 +6,7 @@ import HeroSection from '@/components/layout/HeroSection';
 import Footer from '@/components/layout/Footer';
 import ScrollToTopButton from '@/components/layout/ScrollToTopButton';
 import TrendListSplit from '@/components/trend/TrendListSplit';
+import type { KeywordInsightSeoPayload } from '@/components/trend/TrendDetailPanel';
 import SearchResultList from '@/components/search/SearchResultList';
 import DataReportTab from '@/components/report/DataReportTab';
 import LegalMarkdownPage from '@/pages/LegalMarkdownPage';
@@ -64,6 +65,9 @@ export default function App() {
 
   const { dailyData, realtimeData, loading, error } = useTrendSplit('전체');
   const keywordSlug = isKeywordPage ? location.pathname.replace('/keyword/', '').replace(/\/$/, '') : '';
+
+  const selectedItemRef = useRef<TrendItem | null>(null);
+  selectedItemRef.current = selectedItem;
 
   const gaFirstLoadRef = useRef(true);
   useEffect(() => {
@@ -141,6 +145,30 @@ export default function App() {
     };
   }, [isKeywordPage, keywordSlug, loading, dailyData, realtimeData]);
 
+  /** 패널에서 받은 인사이트 요약으로 메타 보강 (keyword-insight 추가 호출 없음) */
+  const onKeywordInsightForSeo = useCallback(
+    (payload: KeywordInsightSeoPayload) => {
+      if (!isKeywordPage) return;
+      const current = selectedItemRef.current;
+      if (!current || String(current.id) !== payload.keywordId) return;
+
+      const summary = payload.summary?.trim() ?? '';
+      const fallbackFromItem = current.description?.trim() ?? '';
+      const description =
+        (summary.length > 0 ? summary : '') ||
+        (fallbackFromItem && !isPlaceholderScoreDescription(fallbackFromItem) ? fallbackFromItem : '') ||
+        `「${current.keyword}」 관련 실시간 뉴스 트렌드와 기사를 TREN:D LAB에서 확인하세요.`;
+
+      applyKeywordPageSeo({
+        keyword: current.keyword,
+        description,
+        pagePath: location.pathname,
+      });
+    },
+    [isKeywordPage, location.pathname],
+  );
+
+  /** 첫 페인트·딥링크: 아직 패널 인사이트 전이면 item 기반 설명 또는 기본 문구 */
   useEffect(() => {
     if (!isKeywordPage) {
       resetDefaultSeo();
@@ -152,29 +180,16 @@ export default function App() {
       return;
     }
 
-    let cancelled = false;
+    const fallbackFromItem = selectedItem.description?.trim() ?? '';
+    const description =
+      (fallbackFromItem && !isPlaceholderScoreDescription(fallbackFromItem) ? fallbackFromItem : '') ||
+      `「${selectedItem.keyword}」 관련 실시간 뉴스 트렌드와 기사를 TREN:D LAB에서 확인하세요.`;
 
-    void (async () => {
-      const insight = await fetchKeywordInsight(String(selectedItem.id));
-      if (cancelled) return;
-
-      const summary = insight?.summary?.trim() ?? '';
-      const fallbackFromItem = selectedItem.description?.trim() ?? '';
-      const description =
-        summary ||
-        (fallbackFromItem && !isPlaceholderScoreDescription(fallbackFromItem) ? fallbackFromItem : '') ||
-        `「${selectedItem.keyword}」 관련 실시간 뉴스 트렌드와 기사를 TREN:D LAB에서 확인하세요.`;
-
-      applyKeywordPageSeo({
-        keyword: selectedItem.keyword,
-        description,
-        pagePath: location.pathname,
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    applyKeywordPageSeo({
+      keyword: selectedItem.keyword,
+      description,
+      pagePath: location.pathname,
+    });
   }, [isKeywordPage, selectedItem, loading, keywordResolvePending, location.pathname]);
 
   const handleSearch = (query: string, response: SearchResultResponse) => {
@@ -234,6 +249,7 @@ export default function App() {
                 error={error}
                 keywordDeepLinkLoading={isKeywordPage && (loading || keywordResolvePending)}
                 keywordDeepLinkNotFound={isKeywordPage && !loading && !keywordResolvePending && !selectedItem}
+                onKeywordInsightForSeo={onKeywordInsightForSeo}
               />
             )}
           </div>
