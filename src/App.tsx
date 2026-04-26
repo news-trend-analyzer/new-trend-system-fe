@@ -209,7 +209,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 flex flex-col">
       <Navigation keywords={keywords} />
-      // 광고 고지 표시
+      {/* 광고 고지 표시 */}
       {!isReportPage && !legalPage && (
         <div className="max-w-5xl w-full mx-auto px-4 pt-4">
           <div
