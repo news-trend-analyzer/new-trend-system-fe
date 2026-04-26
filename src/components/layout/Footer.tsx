@@ -85,7 +85,7 @@ export default function Footer() {
           </p>
           <p className="mt-2 text-xs text-slate-500 max-w-3xl">
             <a
-              href="https://link.coupang.com/a/edGiOd"
+              href="https://link.coupang.com/a/ewZESj"
               target="_blank"
               rel="noopener noreferrer sponsored"
               className="text-teal-600 hover:text-teal-700 underline underline-offset-2"
