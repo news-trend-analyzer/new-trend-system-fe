@@ -209,19 +209,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 flex flex-col">
       <Navigation keywords={keywords} />
-      {/* 광고 고지 표시 */}
-      {!isReportPage && !legalPage && (
-        <div className="max-w-5xl w-full mx-auto px-4 pt-4">
-          <div
-            className="rounded-lg border border-red-600 bg-red-50 px-4 py-3 text-base md:text-lg font-extrabold leading-7 text-red-900"
-            role="note"
-            aria-label="광고 고지"
-          >
-            [광고] 이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
-          </div>
-        </div>
-      )}
-      {/* 여기까지 광고 고지 표시 */}
       {isReportPage ? (
         <DataReportTab />
       ) : legalPage ? (
