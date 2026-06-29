@@ -27,7 +27,7 @@ export default function BriefingFloatingWidget({
 
   return (
     <>
-      <aside className="fixed right-5 top-32 z-40 hidden w-72 rounded-2xl border border-teal-100 bg-white/95 p-4 shadow-2xl shadow-slate-900/12 backdrop-blur lg:block xl:right-8">
+      <aside className="fixed left-5 top-32 z-40 hidden w-72 rounded-2xl border border-teal-100 bg-white/95 p-4 shadow-2xl shadow-slate-900/12 backdrop-blur lg:block xl:left-8">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-black text-slate-900">오늘의 브리핑</p>
