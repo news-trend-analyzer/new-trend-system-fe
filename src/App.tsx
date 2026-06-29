@@ -219,7 +219,7 @@ export default function App() {
       ) : (
         <>
           <HeroSection onSearch={handleSearch} popularKeywords={keywords} />
-          <div className="flex-1">
+          <div className="flex-1 min-h-[calc(100dvh-4rem)]">
             {isSearchMode ? (
               <div>
                 <div className="max-w-5xl mx-auto px-4 pt-6">

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendItem as TrendItemType } from '@/types';
 
-const ENABLE_RETENTION_MOCK = import.meta.env.DEV && import.meta.env.VITE_ENABLE_RETENTION_MOCK === 'true';
-
 interface TrendItemProps {
   item: TrendItemType;
   index: number;
@@ -80,7 +78,7 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
         </div>
         <div className="mt-2 flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-400">
           <span className="text-teal-600 opacity-80 group-hover:opacity-100">
-            {isSelected ? '지금 보는 중' : ENABLE_RETENTION_MOCK ? '30초 컷' : '3분 요약'}
+            {isSelected ? '지금 보는 중' : '키워드 분석'}
           </span>
         </div>
       </div>

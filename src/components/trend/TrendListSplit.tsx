@@ -23,7 +23,6 @@ type TabType = 'daily' | 'realtime';
 const TAB_PARAM = 'tab';
 /** 상세 패널 키워드 — 공유·북마크·뒤로가기·analytics(location.search) 연동 */
 const KW_PARAM = 'kw';
-const ENABLE_RETENTION_MOCK = import.meta.env.DEV && import.meta.env.VITE_ENABLE_RETENTION_MOCK === 'true';
 
 function parseTabFromSearch(search: string): TabType {
   const params = new URLSearchParams(search);
@@ -94,24 +93,22 @@ export default function TrendListSplit({
   const handleItemSelect = (item: TrendItemType) => {
     const nextItem = { ...item, trendType: activeTab };
     onItemClick(nextItem);
-    if (ENABLE_RETENTION_MOCK) {
-      setCompletedBriefingIds(prev => {
-        const next = new Set(prev);
-        next.add(String(item.id));
-        return next;
-      });
-    }
+    setCompletedBriefingIds(prev => {
+      const next = new Set(prev);
+      next.add(String(item.id));
+      return next;
+    });
     const query = activeTab === 'realtime' ? '?tab=realtime' : '';
     navigate(`/keyword/${encodeURIComponent(String(item.id))}${query}`);
   };
 
-  /* 단일 열(모바일)에서만: 목록 항목 선택 후 상세 패널이 보이도록 스크롤 */
+  /* 단일 열(모바일)에서만: 선택 후 상세 패널 위치로 즉시 이동 */
   useEffect(() => {
     if (!selectedItem) return;
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
 
     const id = requestAnimationFrame(() => {
-      detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      detailPanelRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
     });
     return () => cancelAnimationFrame(id);
   }, [selectedItem]);
@@ -131,16 +128,25 @@ export default function TrendListSplit({
   const currentData = activeTab === 'daily' ? dailyData : realtimeData;
   const briefingItems = currentData.slice(0, 3);
   const completedBriefingCount = briefingItems.filter(item => completedBriefingIds.has(String(item.id))).length;
-  const nextItems = currentData
-    .filter(item => {
-      if (!selectedItem) return true;
-      return String(item.id) !== String(selectedItem.id) &&
-        (item.originalKeyword || item.keyword) !== (selectedItem.originalKeyword || selectedItem.keyword);
-    })
-    .slice(0, 3);
+  const selectedIndex = selectedItem
+    ? currentData.findIndex(item =>
+        String(item.id) === String(selectedItem.id) ||
+        (item.originalKeyword || item.keyword) === (selectedItem.originalKeyword || selectedItem.keyword)
+      )
+    : -1;
+  const nextItems = currentData.length > 0
+    ? Array.from({ length: Math.min(3, currentData.length) }, (_, offset) => {
+        const start = selectedIndex >= 0 ? selectedIndex + 1 : 0;
+        return currentData[(start + offset) % currentData.length];
+      }).filter(item => {
+        if (!selectedItem || currentData.length === 1) return true;
+        return String(item.id) !== String(selectedItem.id) &&
+          (item.originalKeyword || item.keyword) !== (selectedItem.originalKeyword || selectedItem.keyword);
+      })
+    : [];
 
   return (
-    <main id="trend-content" className="max-w-7xl mx-auto px-4 pb-20 min-h-[60vh] scroll-mt-[5.25rem]">
+    <main id="trend-content" className="max-w-7xl mx-auto px-4 pb-20 min-h-[calc(100dvh-5rem)] scroll-mt-[5.25rem]">
       {error && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 my-8">
           <div className="flex items-start gap-3">
@@ -222,7 +228,7 @@ export default function TrendListSplit({
           {/* 우측: 키워드 상세 (모바일 스크롤 시 sticky 네비에 안 가리도록 scroll-mt) */}
           <div
             ref={detailPanelRef}
-            className={`lg:col-span-2 w-full transition-all duration-300 scroll-mt-[5.25rem] lg:scroll-mt-0 ${
+            className={`lg:sticky lg:top-20 lg:col-span-2 lg:h-[calc(100dvh-6.5rem)] w-full scroll-mt-[5.25rem] lg:scroll-mt-0 ${
               selectedItem ? 'min-h-[400px]' : ''
             }`}
           >
@@ -242,7 +248,7 @@ export default function TrendListSplit({
           </div>
         </div>
       )}
-      {ENABLE_RETENTION_MOCK && !error && !loading && (
+      {!error && !loading && (
         <BriefingFloatingWidget
           items={briefingItems}
           completedIds={completedBriefingIds}

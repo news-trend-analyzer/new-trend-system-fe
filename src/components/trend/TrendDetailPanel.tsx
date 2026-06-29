@@ -196,6 +196,7 @@ export default function TrendDetailPanel({
 }: TrendDetailPanelProps) {
   const onKeywordInsightForSeoRef = useRef(onKeywordInsightForSeo);
   onKeywordInsightForSeoRef.current = onKeywordInsightForSeo;
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const [searchResponse, setSearchResponse] = useState<SearchResultResponse>({ total: 0, items: [], page: 1, pageSize: 5 });
   const [currentPage, setCurrentPage] = useState(1);
@@ -231,6 +232,7 @@ export default function TrendDetailPanel({
 
   useEffect(() => {
     if (itemKeywordId) {
+      contentRef.current?.scrollTo({ top: 0, behavior: 'auto' });
       setCurrentPage(1);
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       setKeywordInsight('');
@@ -322,7 +324,7 @@ export default function TrendDetailPanel({
   if (!item) {
     if (deepLinkLoading) {
       return (
-        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300 min-h-[400px]">
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden min-h-[400px] lg:h-full">
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
             <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-teal-500 border-t-transparent mb-3" />
             <p className="text-slate-600 text-sm">키워드 정보를 불러오는 중...</p>
@@ -332,7 +334,7 @@ export default function TrendDetailPanel({
     }
     if (deepLinkNotFound) {
       return (
-        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300 min-h-[400px]">
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden min-h-[400px] lg:h-full">
           <div className="flex flex-col items-center justify-start pt-10 pb-10 px-10 text-center">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
               <i className="ri-error-warning-line text-3xl text-amber-600"></i>
@@ -346,7 +348,7 @@ export default function TrendDetailPanel({
       );
     }
     return (
-      <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden transition-all duration-300">
+      <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden min-h-[400px] lg:h-full">
         <div className="flex flex-col items-center justify-start pt-8 pb-10 px-10 text-center">
           <div className="w-20 h-20 rounded-2xl bg-teal-50 flex items-center justify-center mb-6">
             <i className="ri-bar-chart-box-line text-4xl text-teal-500"></i>
@@ -378,13 +380,13 @@ export default function TrendDetailPanel({
   }
 
   return (
-    <div className="min-h-[400px] flex flex-col overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 transition-all duration-300">
+    <div className="min-h-[400px] lg:h-full flex flex-col overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 transition-colors duration-200">
       <div className="h-14 flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-400 pl-6 pr-5 text-white shrink-0">
         <div className="text-teal-100 font-semibold text-sm shrink-0">랭킹 #{item.rank}</div>
         <h1 className="text-base font-bold line-clamp-1 break-words flex-1 min-w-0">{item.keyword}</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div ref={contentRef} className="flex-1 overflow-y-auto p-6">
         <section className="mb-6">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <i className="ri-robot-2-line text-sm text-teal-600"></i>
@@ -394,8 +396,11 @@ export default function TrendDetailPanel({
             </span>
           </h4>
           {isInsightLoading ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-5">
-              <p className="text-slate-400 leading-relaxed text-sm">AI 요약 생성 중...</p>
+            <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-5 py-5">
+              <div className="text-center">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+                <p className="text-slate-400 leading-relaxed text-sm">AI 요약 생성 중...</p>
+              </div>
             </div>
           ) : isRealtimeItem ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -420,7 +425,7 @@ export default function TrendDetailPanel({
                     <p className="text-sm font-extrabold text-slate-900">
                       AI가 {(apiBriefing.articleCount || searchResponse.total || item.articles.length || 1).toLocaleString()}개의 기사를 읽었습니다.
                     </p>
-                    <p className="mt-1 text-xs font-medium text-slate-500">30초 안에 핵심만 확인하세요.</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">핵심 흐름만 먼저 확인하세요.</p>
                     {apiBriefing.oneLineSummary && (
                       <p className="mt-3 text-sm font-semibold leading-6 text-slate-700">
                         {apiBriefing.oneLineSummary}
@@ -527,7 +532,7 @@ export default function TrendDetailPanel({
                         <div>
                           <p className="flex items-center gap-1.5 text-sm font-black text-teal-800">
                             <i className="ri-checkbox-circle-fill text-base"></i>
-                            30초 요약 완료
+                            요약 확인 완료
                           </p>
                           <p className="mt-1 text-xs font-medium text-teal-700">
                             오늘의 브리핑 {briefingProgress.completed}/{briefingProgress.total || 3} 완료
@@ -610,8 +615,8 @@ export default function TrendDetailPanel({
             </div>
           ) : (
             <>
-              <div className="relative w-full">
-                <div className="max-h-[min(720px,70dvh)] overflow-y-auto overscroll-y-contain rounded-xl">
+              <div className="relative min-h-[360px] w-full">
+                <div className="min-h-[360px] max-h-[min(720px,70dvh)] overflow-y-auto overscroll-y-contain rounded-xl">
                   <div className={`grid gap-3 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                     {(apiBriefing ? searchResponse.items.slice(0, 3) : searchResponse.items).map((result, index) => (
                       <SearchResultItem key={result.id || index} result={result} />

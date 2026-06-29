@@ -8,6 +8,7 @@
 @layer base {
   html {
     font-size: 15px;
+    overflow-y: scroll;
   }
   @media (min-width: 768px) {
     html {
@@ -50,4 +51,3 @@
   outline: none !important;
   border: none !important;
 }
-
