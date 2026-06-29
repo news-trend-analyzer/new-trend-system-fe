@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TrendItem as TrendItemType } from '@/types';
 
+const ENABLE_RETENTION_MOCK = import.meta.env.DEV && import.meta.env.VITE_ENABLE_RETENTION_MOCK === 'true';
+
 interface TrendItemProps {
   item: TrendItemType;
   index: number;
@@ -11,10 +13,7 @@ interface TrendItemProps {
 export default function TrendItem({ item, index, onClick, isSelected = false }: TrendItemProps) {
   const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
   
-  // articles 배열에서 타이틀 추출 (keyword도 포함)
-  const titles = item.articles.length > 0 
-    ? item.articles.map(article => article.title)
-    : [item.keyword];
+  const titles = item.articles.map(article => article.title).filter(Boolean);
 
   useEffect(() => {
     if (titles.length <= 1) return;
@@ -26,28 +25,25 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
     return () => clearInterval(interval);
   }, [titles.length]);
 
-  const currentTitle = titles[currentTitleIndex] || item.keyword || `키워드 #${item.rank}`;
+  const currentTitle = titles[currentTitleIndex] || item.description || `${item.keyword} 관련 이슈를 확인해보세요`;
 
   return (
     <div
       onClick={onClick}
-      className={`group p-5 rounded-2xl border shadow-md hover:shadow-lg cursor-pointer transition-all flex items-center gap-6 ${
+      className={`group relative overflow-hidden p-4 rounded-2xl border shadow-md hover:shadow-lg cursor-pointer transition-all flex items-start gap-4 ${
         isSelected
-          ? 'bg-teal-50 border-teal-300 ring-2 ring-teal-200'
+          ? 'bg-teal-50 border-teal-300 ring-2 ring-teal-200 shadow-lg'
           : 'bg-white border-slate-200 hover:border-teal-200'
       }`}
     >
-      <div className={`text-3xl font-black italic transition-colors w-12 ${isSelected ? 'text-teal-400' : 'text-slate-200 group-hover:text-slate-300'}`}>
+      <div className={`text-2xl font-black italic leading-none transition-colors w-11 ${isSelected ? 'text-teal-400' : 'text-slate-200 group-hover:text-slate-300'}`}>
         #{item.rank}
       </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-3 mb-1 flex-nowrap">
-          <div className="flex-1 min-w-0 relative h-7 overflow-hidden">
-            <h3
-              key={currentTitleIndex}
-              className="text-lg font-bold group-hover:text-teal-600 line-clamp-1"
-            >
-              {currentTitle}
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center gap-3 flex-nowrap">
+          <div className="flex-1 min-w-0">
+            <h3 className="line-clamp-1 text-lg font-extrabold text-slate-900 group-hover:text-teal-700">
+              {item.keyword}
             </h3>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 h-6">
@@ -74,9 +70,20 @@ export default function TrendItem({ item, index, onClick, isSelected = false }: 
             </div>
           </div>
         </div>
-        <p className="text-slate-400 text-xs mt-0.5">{item.description}</p>
+        <div className="relative min-h-5 overflow-hidden">
+          <p
+            key={currentTitleIndex}
+            className="line-clamp-1 text-sm font-medium leading-5 text-slate-600 transition-colors group-hover:text-slate-800"
+          >
+            {currentTitle}
+          </p>
+        </div>
+        <div className="mt-2 flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-400">
+          <span className="text-teal-600 opacity-80 group-hover:opacity-100">
+            {isSelected ? '지금 보는 중' : ENABLE_RETENTION_MOCK ? '30초 컷' : '3분 요약'}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
-

@@ -8,9 +8,17 @@ interface SearchResultListProps {
   total?: number;
   loading?: boolean;
   onSearch?: (query: string, response: SearchResultResponse) => void;
+  popularKeywords?: string[];
 }
 
-export default function SearchResultList({ query, results, total: initialTotal, loading: initialLoading, onSearch }: SearchResultListProps) {
+export default function SearchResultList({
+  query,
+  results,
+  total: initialTotal,
+  loading: initialLoading,
+  onSearch,
+  popularKeywords = [],
+}: SearchResultListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(initialTotal || results.length);
   const [displayResults, setDisplayResults] = useState<SearchResult[]>(results);
@@ -62,6 +70,24 @@ export default function SearchResultList({ query, results, total: initialTotal, 
     }
   }, [currentPage, query]);
 
+  const handlePopularKeywordSearch = async (keyword: string) => {
+    setCurrentPage(1);
+    setIsLoading(true);
+    try {
+      const response = await searchArticles(keyword, 1, pageSize);
+      setDisplayResults(response.items);
+      setTotalResults(response.total);
+      onSearch?.(keyword, response);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('추천 키워드 검색 에러:', error);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const visiblePopularKeywords = popularKeywords.slice(0, 8);
   const loading = initialLoading || isLoading;
   if (loading) {
     return (
@@ -80,9 +106,23 @@ export default function SearchResultList({ query, results, total: initialTotal, 
     return (
       <main className="max-w-5xl mx-auto px-4 pb-20 min-h-[60vh]">
         <div className="text-center py-20 min-h-[40vh] flex items-center justify-center">
-          <div>
+          <div className="max-w-2xl">
             <p className="text-slate-500 mb-2">"{query}"에 대한 검색 결과가 없습니다.</p>
             <p className="text-slate-400 text-sm">다른 키워드로 검색해보세요.</p>
+            {visiblePopularKeywords.length > 0 && (
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {visiblePopularKeywords.map((keyword) => (
+                  <button
+                    key={keyword}
+                    type="button"
+                    onClick={() => handlePopularKeywordSearch(keyword)}
+                    className="max-w-[10rem] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                  >
+                    #{keyword}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -243,4 +283,3 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: nu
     </div>
   );
 };
-

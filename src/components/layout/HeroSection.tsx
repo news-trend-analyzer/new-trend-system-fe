@@ -4,9 +4,10 @@ import { SearchSuggestion, SearchResultResponse } from '@/types';
 
 interface HeroSectionProps {
   onSearch?: (query: string, response: SearchResultResponse) => void;
+  popularKeywords?: string[];
 }
 
-export default function HeroSection({ onSearch }: HeroSectionProps) {
+export default function HeroSection({ onSearch, popularKeywords = [] }: HeroSectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -114,10 +115,18 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
     }
   };
 
+  const handlePopularKeywordClick = (keyword: string) => {
+    setSearchQuery(keyword);
+    setShowSuggestions(false);
+    performSearch(keyword);
+  };
+
+  const visiblePopularKeywords = popularKeywords.slice(0, 5);
+
   return (
-    <section className="bg-gradient-to-b from-white to-slate-50 pt-8 pb-8 sm:pt-12 sm:pb-12 md:pt-16 md:pb-12">
+    <section className="bg-gradient-to-b from-white to-slate-50 pt-6 pb-4 sm:pt-9 sm:pb-6 md:pt-10 md:pb-7">
       <div className="max-w-4xl mx-auto px-4 text-center">
-        <h1 className="text-[1.65rem] leading-snug sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-5 sm:mb-6">
+        <h1 className="text-[1.55rem] leading-snug sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-5">
           지금 대한민국이 <br />
           <span className="text-teal-500">가장 많이 검색하는 키워드</span>는?
         </h1>
@@ -138,11 +147,11 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               }}
               onKeyDown={handleKeyDown}
               placeholder="궁금한 키워드를 검색해보세요"
-              className="w-full pl-4 pr-[4.25rem] sm:pl-6 sm:pr-28 py-3.5 sm:py-4 rounded-2xl border-none shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 focus:ring-2 focus:ring-teal-500 outline-none text-base sm:text-lg transition-all"
+              className="w-full pl-4 pr-[4.25rem] sm:pl-6 sm:pr-28 py-3 sm:py-3.5 rounded-2xl border-none shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 focus:ring-2 focus:ring-teal-500 outline-none text-base sm:text-lg transition-all"
             />
             <button 
               onClick={handleSearch}
-              className="absolute right-3 top-2.5 bg-teal-500 hover:bg-teal-600 text-white p-2 px-5 rounded-xl transition-all"
+              className="absolute right-2.5 top-2 bg-teal-500 hover:bg-teal-600 text-white p-2 px-5 rounded-xl transition-all"
             >
               <i className="ri-search-line"></i>
             </button>
@@ -182,8 +191,23 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
             </div>
           )}
         </div>
+        <div className="mt-3 flex items-center justify-center">
+          {visiblePopularKeywords.length > 0 && (
+            <div className="flex max-w-2xl flex-nowrap items-center justify-center gap-1.5 overflow-hidden sm:gap-2">
+              {visiblePopularKeywords.map((keyword) => (
+                <button
+                  key={keyword}
+                  type="button"
+                  onClick={() => handlePopularKeywordClick(keyword)}
+                  className="min-w-0 max-w-[5.75rem] truncate rounded-full border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 sm:max-w-[9.5rem] sm:px-3 sm:text-sm"
+                >
+                  #{keyword}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
 }
-

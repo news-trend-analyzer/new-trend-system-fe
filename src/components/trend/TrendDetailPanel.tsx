@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { TrendItem, SearchResult, SearchResultResponse } from '@/types';
-import { fetchKeywordInsight, searchArticlesByKeyword } from '@/utils/api';
+import { fetchKeywordInsight, searchArticlesByKeyword, type KeywordInsightResponse } from '@/utils/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -12,6 +12,13 @@ export type KeywordInsightSeoPayload = {
 
 interface TrendDetailPanelProps {
   item: TrendItem | null;
+  nextItems?: TrendItem[];
+  onNextItemClick?: (item: TrendItem) => void;
+  briefingProgress?: {
+    completed: number;
+    total: number;
+    isCurrentComplete: boolean;
+  };
   /** /keyword/:id 진입 시 랭킹·인사이트 조회 중 */
   deepLinkLoading?: boolean;
   /** ID·슬러그 모두 매칭 실패 */
@@ -52,6 +59,16 @@ function normalizeMarkdown(text: string): string {
     .replace(/\*\*\s+/g, '**')
     .replace(/\s+\*\*/g, '**')
     .trim();
+}
+
+function buildBriefingQuestions(briefing: NonNullable<KeywordInsightResponse['briefing']>) {
+  return (briefing.questions || [])
+    .filter(question => question.question && question.answer)
+    .map(question => ({
+      question: question.question,
+      answer: question.answer,
+      count: question.interestCount,
+    }));
 }
 
 const SearchResultItem = memo(({ result }: { result: SearchResult }) => {
@@ -170,6 +187,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange, disabled = false }:
 
 export default function TrendDetailPanel({
   item,
+  nextItems = [],
+  onNextItemClick,
+  briefingProgress,
   deepLinkLoading = false,
   deepLinkNotFound = false,
   onKeywordInsightForSeo,
@@ -181,19 +201,42 @@ export default function TrendDetailPanel({
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [keywordInsight, setKeywordInsight] = useState('');
+  const [keywordInsightData, setKeywordInsightData] = useState<KeywordInsightResponse | null>(null);
   const [insightKeyword, setInsightKeyword] = useState('');
   const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState<number | null>(0);
   const pageSize = 5;
+  const totalPages = Math.ceil(searchResponse.total / pageSize);
   const isRealtimeItem = item?.trendType === 'realtime';
   /** item 전체가 아니라 id로 의존 — 클릭 직후·URL 동기화 등으로 같은 키워드 객체가 새 참조로 들어와도 API 중복 호출 방지 */
   const itemKeywordId = item?.id != null ? String(item.id) : null;
+  const apiBriefing = useMemo(() => {
+    const briefing = keywordInsightData?.briefing;
+    if (!briefing) return null;
+    const trendSignal = briefing.trendSignal;
+
+    return {
+      articleCount: keywordInsightData.articleCount,
+      oneLineSummary: briefing.oneLineSummary,
+      whySteps: (briefing.whySteps || []).filter(Boolean).slice(0, 4),
+      trendSignal,
+      hasTrendSignal: Boolean(
+        trendSignal?.label ||
+        trendSignal?.basis ||
+        typeof trendSignal?.changeRate === 'number'
+      ),
+      questions: buildBriefingQuestions(briefing),
+    };
+  }, [keywordInsightData]);
 
   useEffect(() => {
     if (itemKeywordId) {
       setCurrentPage(1);
       setSearchResponse({ total: 0, items: [], page: 1, pageSize: 5 });
       setKeywordInsight('');
+      setKeywordInsightData(null);
       setInsightKeyword('');
+      setActiveQuestionIndex(0);
     }
   }, [itemKeywordId]);
 
@@ -201,6 +244,7 @@ export default function TrendDetailPanel({
     if (isRealtimeItem) {
       setInsightKeyword('');
       setKeywordInsight('');
+      setKeywordInsightData(null);
       setIsInsightLoading(false);
       if (itemKeywordId) {
         onKeywordInsightForSeoRef.current?.({ keywordId: itemKeywordId, summary: null });
@@ -217,6 +261,7 @@ export default function TrendDetailPanel({
           if (!cancelled) {
             setInsightKeyword(insightData?.keyword ?? '');
             setKeywordInsight(insightData?.summary ?? '');
+            setKeywordInsightData(insightData);
             const raw = insightData?.summary?.trim();
             onKeywordInsightForSeoRef.current?.({
               keywordId: itemKeywordId,
@@ -228,6 +273,7 @@ export default function TrendDetailPanel({
           if (!cancelled) {
             setInsightKeyword('');
             setKeywordInsight('');
+            setKeywordInsightData(null);
             onKeywordInsightForSeoRef.current?.({ keywordId: itemKeywordId, summary: null });
           }
         })
@@ -242,6 +288,7 @@ export default function TrendDetailPanel({
 
     setInsightKeyword('');
     setKeywordInsight('');
+    setKeywordInsightData(null);
     setIsInsightLoading(false);
   }, [itemKeywordId, isRealtimeItem]);
 
@@ -347,7 +394,7 @@ export default function TrendDetailPanel({
             </span>
           </h4>
           {isInsightLoading ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-5">
               <p className="text-slate-400 leading-relaxed text-sm">AI 요약 생성 중...</p>
             </div>
           ) : isRealtimeItem ? (
@@ -367,7 +414,141 @@ export default function TrendDetailPanel({
                   키워드: <span className="text-teal-800">{insightKeyword}</span>
                 </p>
               )}
-              {keywordInsight ? (
+              {apiBriefing && (
+                <div className="mb-4 space-y-5">
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                    <p className="text-sm font-extrabold text-slate-900">
+                      AI가 {(apiBriefing.articleCount || searchResponse.total || item.articles.length || 1).toLocaleString()}개의 기사를 읽었습니다.
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">30초 안에 핵심만 확인하세요.</p>
+                    {apiBriefing.oneLineSummary && (
+                      <p className="mt-3 text-sm font-semibold leading-6 text-slate-700">
+                        {apiBriefing.oneLineSummary}
+                      </p>
+                    )}
+                  </div>
+
+                  {apiBriefing.whySteps.length > 0 && (
+                    <div className="rounded-xl border border-teal-100 bg-white px-4 py-4">
+                      <p className="mb-3 flex items-center gap-1.5 text-base font-extrabold text-slate-900">
+                        <i className="ri-fire-line text-xl text-rose-500"></i>
+                        왜 떴나
+                      </p>
+                      <div className="rounded-xl bg-slate-50 px-4 py-1">
+                        {apiBriefing.whySteps.map((step, index, steps) => (
+                          <div key={`${step}-${index}`}>
+                            <div className="flex items-center gap-3 py-3">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-teal-700 shadow-sm ring-1 ring-slate-200">
+                                {index + 1}
+                              </span>
+                              <p className="line-clamp-1 text-base font-extrabold leading-6 text-slate-900">
+                                {step}
+                              </p>
+                            </div>
+                            {index < steps.length - 1 && (
+                              <div className="ml-10 border-t border-slate-200" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {apiBriefing.hasTrendSignal && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                            <i className="ri-line-chart-line text-sm text-teal-600"></i>
+                            최근 흐름
+                          </p>
+                          {apiBriefing.trendSignal?.label && (
+                            <p className="text-xl font-black text-slate-900">{apiBriefing.trendSignal.label}</p>
+                          )}
+                        </div>
+                        {typeof apiBriefing.trendSignal?.changeRate === 'number' && (
+                          <span className={apiBriefing.trendSignal.changeRate >= 0 ? 'text-lg font-black text-rose-500' : 'text-lg font-black text-blue-500'}>
+                            {apiBriefing.trendSignal.changeRate >= 0 ? '+' : ''}{apiBriefing.trendSignal.changeRate}%
+                          </span>
+                        )}
+                      </div>
+                      {apiBriefing.trendSignal?.basis && (
+                        <p className="mt-2 text-xs leading-5 text-slate-500">
+                          {apiBriefing.trendSignal.basis}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {apiBriefing.questions.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                      <p className="mb-3 flex items-center gap-1.5 text-sm font-extrabold text-slate-900">
+                        <i className="ri-question-answer-line text-base text-teal-600"></i>
+                        사람들이 가장 많이 물어본 질문
+                      </p>
+                      <div className="grid gap-2">
+                        {apiBriefing.questions.map((question, index) => {
+                          const isActive = activeQuestionIndex === index;
+                          return (
+                            <button
+                              key={question.question}
+                              type="button"
+                              onClick={() => setActiveQuestionIndex(isActive ? null : index)}
+                              className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                                isActive
+                                  ? 'border-teal-200 bg-teal-50/70'
+                                  : 'border-slate-100 bg-white hover:border-teal-100 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-bold text-slate-800">Q. {question.question}</span>
+                                <i className={`${isActive ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} text-lg text-slate-400`}></i>
+                              </div>
+                              {typeof question.count === 'number' && (
+                                <p className="mt-1 text-xs font-semibold text-teal-600">
+                                  {question.count.toLocaleString()}명이 궁금해했습니다.
+                                </p>
+                              )}
+                              {isActive && (
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                  {question.answer}
+                                </p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {briefingProgress && (
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="flex items-center gap-1.5 text-sm font-black text-teal-800">
+                            <i className="ri-checkbox-circle-fill text-base"></i>
+                            30초 요약 완료
+                          </p>
+                          <p className="mt-1 text-xs font-medium text-teal-700">
+                            오늘의 브리핑 {briefingProgress.completed}/{briefingProgress.total || 3} 완료
+                          </p>
+                        </div>
+                        {nextItems[0] && (
+                          <button
+                            type="button"
+                            onClick={() => onNextItemClick?.(nextItems[0])}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-teal-700"
+                          >
+                            다음 이슈 보기
+                            <i className="ri-arrow-right-s-line text-lg"></i>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {!apiBriefing && keywordInsight ? (
                 <div className="text-slate-700 leading-7 text-[15px] break-words">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -401,23 +582,27 @@ export default function TrendDetailPanel({
                     {normalizeMarkdown(keywordInsight)}
                   </ReactMarkdown>
                 </div>
-              ) : (
+              ) : !apiBriefing ? (
                 <p className="text-slate-500 leading-relaxed text-sm">
                   AI 요약 정보가 없습니다.
                 </p>
-              )}
+              ) : null}
             </div>
           )}
         </section>
 
         <section>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <i className="ri-newspaper-line text-sm"></i>
-            관련 주요 소식
-            {searchResponse.total > 0 && (
-              <span className="ml-1 text-slate-500 normal-case font-normal">(전체 {searchResponse.total}개)</span>
-            )}
-          </h4>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h4 className="flex items-center gap-2 text-base font-black text-slate-900">
+                <i className="ri-newspaper-line text-lg text-teal-600"></i>
+                {apiBriefing ? 'AI가 고른 필수 기사 3개' : '관련 주요 소식'}
+              </h4>
+              {searchResponse.total > 0 && (
+                <p className="mt-0.5 text-xs font-medium text-slate-500">전체 {searchResponse.total}개 중 먼저 볼 기사</p>
+              )}
+            </div>
+          </div>
 
           {searchResponse.items.length === 0 && !isLoading ? (
             <div className="text-center py-12">
@@ -428,7 +613,7 @@ export default function TrendDetailPanel({
               <div className="relative w-full">
                 <div className="max-h-[min(720px,70dvh)] overflow-y-auto overscroll-y-contain rounded-xl">
                   <div className={`grid gap-3 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {searchResponse.items.map((result, index) => (
+                    {(apiBriefing ? searchResponse.items.slice(0, 3) : searchResponse.items).map((result, index) => (
                       <SearchResultItem key={result.id || index} result={result} />
                     ))}
                   </div>
@@ -444,12 +629,23 @@ export default function TrendDetailPanel({
               </div>
               {searchResponse.total > pageSize && (
                 <div className="mt-4 shrink-0">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={Math.ceil(searchResponse.total / pageSize)}
-                    onPageChange={setCurrentPage}
-                    disabled={isLoading}
-                  />
+                  {apiBriefing ? (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={isLoading || currentPage >= totalPages}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition-colors hover:border-teal-200 hover:bg-teal-50 disabled:opacity-50"
+                    >
+                      {currentPage >= totalPages ? '필수 기사 모두 확인' : '필수 기사 더보기'}
+                    </button>
+                  ) : (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      disabled={isLoading}
+                    />
+                  )}
                 </div>
               )}
             </>

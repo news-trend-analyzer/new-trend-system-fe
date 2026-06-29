@@ -1,8 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { TrendItem as TrendItemType } from '@/types';
 import TrendItem from './TrendItem';
 import TrendDetailPanel, { type KeywordInsightSeoPayload } from './TrendDetailPanel';
+import BriefingFloatingWidget from './BriefingFloatingWidget';
 
 interface TrendListSplitProps {
   dailyData: TrendItemType[];
@@ -22,6 +23,7 @@ type TabType = 'daily' | 'realtime';
 const TAB_PARAM = 'tab';
 /** 상세 패널 키워드 — 공유·북마크·뒤로가기·analytics(location.search) 연동 */
 const KW_PARAM = 'kw';
+const ENABLE_RETENTION_MOCK = import.meta.env.DEV && import.meta.env.VITE_ENABLE_RETENTION_MOCK === 'true';
 
 function parseTabFromSearch(search: string): TabType {
   const params = new URLSearchParams(search);
@@ -47,6 +49,7 @@ export default function TrendListSplit({
   const activeTab = parseTabFromSearch(searchParams.toString());
   const kwFromUrl = searchParams.get(KW_PARAM);
   const isKeywordRoute = location.pathname.startsWith('/keyword/');
+  const [completedBriefingIds, setCompletedBriefingIds] = useState<Set<string>>(new Set());
 
   /* URL ↔ 선택 키워드 동기화 (딥링크, 브라우저 뒤로가기, 탭 전환) */
   useEffect(() => {
@@ -89,7 +92,15 @@ export default function TrendListSplit({
   ]);
 
   const handleItemSelect = (item: TrendItemType) => {
-    onItemClick({ ...item, trendType: activeTab });
+    const nextItem = { ...item, trendType: activeTab };
+    onItemClick(nextItem);
+    if (ENABLE_RETENTION_MOCK) {
+      setCompletedBriefingIds(prev => {
+        const next = new Set(prev);
+        next.add(String(item.id));
+        return next;
+      });
+    }
     const query = activeTab === 'realtime' ? '?tab=realtime' : '';
     navigate(`/keyword/${encodeURIComponent(String(item.id))}${query}`);
   };
@@ -118,9 +129,18 @@ export default function TrendListSplit({
   };
 
   const currentData = activeTab === 'daily' ? dailyData : realtimeData;
+  const briefingItems = currentData.slice(0, 3);
+  const completedBriefingCount = briefingItems.filter(item => completedBriefingIds.has(String(item.id))).length;
+  const nextItems = currentData
+    .filter(item => {
+      if (!selectedItem) return true;
+      return String(item.id) !== String(selectedItem.id) &&
+        (item.originalKeyword || item.keyword) !== (selectedItem.originalKeyword || selectedItem.keyword);
+    })
+    .slice(0, 3);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 pb-20 min-h-[60vh]">
+    <main id="trend-content" className="max-w-7xl mx-auto px-4 pb-20 min-h-[60vh] scroll-mt-[5.25rem]">
       {error && (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 my-8">
           <div className="flex items-start gap-3">
@@ -134,7 +154,7 @@ export default function TrendListSplit({
       )}
 
       {!error && (
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mt-6 ${!selectedItem ? 'items-start' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8 mt-3 sm:mt-4 ${!selectedItem ? 'items-start' : ''}`}>
           {/* 좌측: 탭 + 랭킹 리스트 */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden">
@@ -208,12 +228,27 @@ export default function TrendListSplit({
           >
             <TrendDetailPanel
               item={selectedItem}
+              nextItems={nextItems}
+              onNextItemClick={(item) => handleItemSelect({ ...item, trendType: activeTab })}
+              briefingProgress={{
+                completed: completedBriefingCount,
+                total: briefingItems.length,
+                isCurrentComplete: selectedItem ? completedBriefingIds.has(String(selectedItem.id)) : false,
+              }}
               deepLinkLoading={keywordDeepLinkLoading}
               deepLinkNotFound={keywordDeepLinkNotFound}
               onKeywordInsightForSeo={onKeywordInsightForSeo}
             />
           </div>
         </div>
+      )}
+      {ENABLE_RETENTION_MOCK && !error && !loading && (
+        <BriefingFloatingWidget
+          items={briefingItems}
+          completedIds={completedBriefingIds}
+          selectedItem={selectedItem}
+          onSelect={(item) => handleItemSelect({ ...item, trendType: activeTab })}
+        />
       )}
     </main>
   );

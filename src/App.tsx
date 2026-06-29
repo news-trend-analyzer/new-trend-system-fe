@@ -90,7 +90,7 @@ export default function App() {
     prevPathnameRef.current = location.pathname;
   }, [location.pathname]);
 
-  const keywords = [...dailyData, ...realtimeData].map(item => item.keyword).filter(Boolean);
+  const keywords = Array.from(new Set([...dailyData, ...realtimeData].map(item => item.keyword).filter(Boolean)));
 
   useLayoutEffect(() => {
     if (!isKeywordPage) {
@@ -218,7 +218,7 @@ export default function App() {
         </>
       ) : (
         <>
-          <HeroSection onSearch={handleSearch} />
+          <HeroSection onSearch={handleSearch} popularKeywords={keywords} />
           <div className="flex-1">
             {isSearchMode ? (
               <div>
@@ -237,6 +237,7 @@ export default function App() {
                   total={searchResponse.total}
                   loading={isSearchLoading}
                   onSearch={handleSearch}
+                  popularKeywords={keywords}
                 />
               </div>
             ) : (

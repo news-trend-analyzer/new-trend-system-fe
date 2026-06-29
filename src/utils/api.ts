@@ -175,16 +175,36 @@ export async function fetchRealtimeRanking(limit: number = 10): Promise<KeywordR
   }
 }
 
-interface KeywordInsightResponse {
-  keywordId: string;
+export interface KeywordInsightBriefingQuestion {
+  question: string;
+  answer: string;
+  interestCount?: number;
+}
+
+export interface KeywordInsightBriefing {
+  oneLineSummary?: string;
+  whySteps?: string[];
+  trendSignal?: {
+    label?: string;
+    changeRate?: number;
+    basis?: string;
+  };
+  questions?: KeywordInsightBriefingQuestion[];
+  essentialArticleIds?: Array<string | number>;
+}
+
+export interface KeywordInsightResponse {
+  keywordId: string | number;
   keyword: string;
   summary: string | null;
-  articleIds: string[] | null;
+  articleIds: Array<string | number> | null;
   analyzedAt: string | null;
+  articleCount?: number;
+  briefing?: KeywordInsightBriefing | null;
 }
 
 // 키워드 AI 인사이트 요약 조회 (단건: /trend/keyword-insight/:keywordId)
-export async function fetchKeywordInsight(keywordId: string): Promise<Pick<KeywordInsightResponse, 'keyword' | 'summary'> | null> {
+export async function fetchKeywordInsight(keywordId: string): Promise<KeywordInsightResponse | null> {
   if (!keywordId || keywordId.trim().length === 0) {
     return null;
   }
@@ -213,8 +233,13 @@ export async function fetchKeywordInsight(keywordId: string): Promise<Pick<Keywo
     if (!data || typeof data !== 'object') return null;
 
     return {
+      keywordId: data.keywordId ?? keywordId,
       keyword: typeof data.keyword === 'string' ? data.keyword : '',
       summary: typeof data.summary === 'string' ? data.summary : null,
+      articleIds: Array.isArray(data.articleIds) ? data.articleIds : null,
+      analyzedAt: typeof data.analyzedAt === 'string' ? data.analyzedAt : null,
+      articleCount: typeof data.articleCount === 'number' ? data.articleCount : undefined,
+      briefing: data.briefing && typeof data.briefing === 'object' ? data.briefing : null,
     };
   } catch (error) {
     if (import.meta.env.DEV) {
