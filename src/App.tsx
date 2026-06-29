@@ -218,7 +218,7 @@ export default function App() {
         </>
       ) : (
         <>
-          {!isKeywordPage && <HeroSection onSearch={handleSearch} />}
+          <HeroSection onSearch={handleSearch} />
           <div className="flex-1">
             {isSearchMode ? (
               <div>
@@ -260,4 +260,3 @@ export default function App() {
     </div>
   );
 }
-

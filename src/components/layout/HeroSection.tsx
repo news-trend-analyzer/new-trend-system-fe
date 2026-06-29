@@ -118,8 +118,8 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
     <section className="bg-gradient-to-b from-white to-slate-50 pt-8 pb-8 sm:pt-12 sm:pb-12 md:pt-16 md:pb-12">
       <div className="max-w-4xl mx-auto px-4 text-center">
         <h1 className="text-[1.65rem] leading-snug sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-5 sm:mb-6">
-          지금 대한민국에서 <br />
-          <span className="text-teal-500">가장 뜨거운 트렌드</span>를 만나보세요
+          지금 대한민국이 <br />
+          <span className="text-teal-500">가장 많이 검색하는 키워드</span>는?
         </h1>
         <div ref={searchRef} className="relative max-w-2xl mx-auto">
           <div className="relative">
