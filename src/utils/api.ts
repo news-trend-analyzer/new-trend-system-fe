@@ -74,21 +74,10 @@ function getSearchApiBaseUrl(): string {
 const API_BASE_URL = getApiBaseUrl();
 const SEARCH_API_BASE_URL = getSearchApiBaseUrl();
 
-// Admin API Key (환경 변수에서 읽어옴, 트렌드 API에만 사용)
-const ADMIN_API_KEY = import.meta.env.VITE_ADMIN_API_KEY || '';
-
-// 트렌드 API용 헤더 (Admin API Key 포함)
 function getTrendApiHeaders(): HeadersInit {
-  const headers: HeadersInit = {
+  return {
     'Content-Type': 'application/json',
   };
-  
-  // Admin API Key가 설정되어 있으면 헤더에 추가
-  if (ADMIN_API_KEY) {
-    headers['X-API-Key'] = ADMIN_API_KEY;
-  }
-  
-  return headers;
 }
 
 // 검색 API용 헤더 (Admin API Key 제외)
@@ -181,6 +170,12 @@ export interface KeywordInsightBriefingQuestion {
   interestCount?: number;
 }
 
+export interface KeywordInsightCommerceHint {
+  label: string;
+  query: string;
+  reason?: string;
+}
+
 export interface KeywordInsightBriefing {
   oneLineSummary?: string;
   whySteps?: string[];
@@ -191,6 +186,7 @@ export interface KeywordInsightBriefing {
   };
   questions?: KeywordInsightBriefingQuestion[];
   essentialArticleIds?: Array<string | number>;
+  commerceHints?: KeywordInsightCommerceHint[];
 }
 
 export interface KeywordInsightResponse {
@@ -201,6 +197,17 @@ export interface KeywordInsightResponse {
   analyzedAt: string | null;
   articleCount?: number;
   briefing?: KeywordInsightBriefing | null;
+  commerceHints?: KeywordInsightCommerceHint[];
+}
+
+export interface CoupangAffiliateProduct {
+  id?: string | number;
+  name: string;
+  url: string;
+  imageUrl?: string;
+  price?: number;
+  priceText?: string;
+  sourceQuery?: string;
 }
 
 // 키워드 AI 인사이트 요약 조회 (단건: /trend/keyword-insight/:keywordId)
@@ -229,7 +236,10 @@ export async function fetchKeywordInsight(keywordId: string): Promise<KeywordIns
       return null;
     }
 
-    const data = (await response.json()) as Partial<KeywordInsightResponse> | null;
+    const rawData = (await response.json()) as (Partial<KeywordInsightResponse> & { data?: Partial<KeywordInsightResponse> }) | null;
+    const data = rawData && typeof rawData === 'object' && rawData.data && typeof rawData.data === 'object'
+      ? rawData.data
+      : rawData;
     if (!data || typeof data !== 'object') return null;
 
     return {
@@ -240,12 +250,249 @@ export async function fetchKeywordInsight(keywordId: string): Promise<KeywordIns
       analyzedAt: typeof data.analyzedAt === 'string' ? data.analyzedAt : null,
       articleCount: typeof data.articleCount === 'number' ? data.articleCount : undefined,
       briefing: data.briefing && typeof data.briefing === 'object' ? data.briefing : null,
+      commerceHints: Array.isArray(data.commerceHints) ? data.commerceHints : undefined,
     };
   } catch (error) {
     if (import.meta.env.DEV) {
       console.error('키워드 인사이트 API 호출 중 에러 발생:', error);
     }
     return null;
+  }
+}
+
+function normalizeCoupangProduct(raw: any, sourceQuery: string): CoupangAffiliateProduct | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const name =
+    raw.name ||
+    raw.title ||
+    raw.productName ||
+    raw.product_name ||
+    raw.itemName ||
+    raw.label ||
+    raw.query ||
+    raw.keyword ||
+    sourceQuery ||
+    '';
+  const url =
+    raw.url ||
+    raw.link ||
+    raw.href ||
+    raw.productLink ||
+    raw.productUrl ||
+    raw.product_url ||
+    raw.affiliateUrl ||
+    raw.affiliate_url ||
+    raw.partnersUrl ||
+    raw.partners_url ||
+    raw.clickUrl ||
+    raw.click_url ||
+    raw.landingUrl ||
+    raw.landing_url ||
+    raw.landingURL ||
+    raw.deeplink ||
+    raw.deepLink ||
+    raw.deep_link ||
+    raw.shortUrl ||
+    raw.shortenUrl ||
+    raw.short_url ||
+    raw.originalUrl ||
+    raw.original_url ||
+    '';
+  const imageUrl =
+    raw.imageUrl ||
+    raw.image_url ||
+    raw.productImageUrl ||
+    raw.product_image_url ||
+    raw.productImage ||
+    raw.product_image ||
+    raw.thumbnail ||
+    raw.thumbnailUrl ||
+    raw.image ||
+    undefined;
+  const rawPrice = raw.price ?? raw.productPrice ?? raw.product_price ?? raw.salePrice ?? raw.sale_price;
+  const price = typeof rawPrice === 'number' ? rawPrice : Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : undefined;
+  const priceText = typeof raw.priceText === 'string' ? raw.priceText : typeof raw.price_text === 'string' ? raw.price_text : undefined;
+
+  if (!url) return null;
+
+  return {
+    id: raw.id ?? raw.productId ?? raw.product_id,
+    name: String(name),
+    url: String(url),
+    imageUrl: typeof imageUrl === 'string' ? imageUrl : undefined,
+    price,
+    priceText,
+    sourceQuery,
+  };
+}
+
+function extractProductRows(data: any): any[] {
+  const looksLikeProduct = (value: any) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const hasName = Boolean(value.name || value.title || value.productName || value.product_name || value.itemName || value.label);
+    const hasUrl = Boolean(
+      value.url ||
+      value.link ||
+      value.href ||
+      value.productLink ||
+      value.productUrl ||
+      value.product_url ||
+      value.affiliateUrl ||
+      value.affiliate_url ||
+      value.partnersUrl ||
+      value.partners_url ||
+      value.clickUrl ||
+      value.click_url ||
+      value.landingUrl ||
+      value.landing_url ||
+      value.landingURL ||
+      value.deeplink ||
+      value.deepLink ||
+      value.deep_link ||
+      value.shortUrl ||
+      value.shortenUrl ||
+      value.short_url ||
+      value.originalUrl ||
+      value.original_url
+    );
+    return hasUrl && (hasName || Boolean(value.query || value.keyword));
+  };
+
+  const candidates = [
+    data,
+    data?.data,
+    data?.result,
+    data?.results,
+    data?.items,
+    data?.products,
+    data?.productData,
+    data?.data?.items,
+    data?.data?.products,
+    data?.data?.productData,
+    data?.data?.result,
+    data?.data?.results,
+    data?.result?.items,
+    data?.result?.products,
+    data?.result?.productData,
+    data?.data?.result?.items,
+    data?.data?.result?.products,
+    data?.data?.result?.productData,
+    data?.data?.data,
+    data?.data?.data?.items,
+    data?.data?.data?.products,
+    data?.data?.data?.productData,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+    if (looksLikeProduct(candidate)) return [candidate];
+  }
+
+  const queue = [data];
+  const visited = new Set<any>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || visited.has(current)) continue;
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      if (current.some(looksLikeProduct)) return current;
+      continue;
+    }
+
+    for (const value of Object.values(current)) {
+      if (!value || typeof value !== 'object') continue;
+      if (Array.isArray(value) && value.some(looksLikeProduct)) return value;
+      queue.push(value);
+    }
+  }
+
+  return [];
+}
+
+async function fetchCoupangDeeplinkFallback(query: string): Promise<CoupangAffiliateProduct[]> {
+  const url = `${API_BASE_URL}/trend/affiliate/coupang/deeplink`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getTrendApiHeaders(),
+      body: JSON.stringify({ query: query.trim() }),
+    });
+
+    if (!response.ok) {
+      if (import.meta.env.DEV) {
+        const errorText = await response.text();
+        console.warn('쿠팡 딥링크 fallback API 호출 실패:', response.status, errorText);
+      }
+      return [];
+    }
+
+    const data = await response.json();
+    const rows = extractProductRows(data);
+    const fallbackRows = rows.length > 0 ? rows : [data];
+
+    return fallbackRows
+      .map(row => normalizeCoupangProduct({ query: query.trim(), ...row }, query.trim()))
+      .filter((product): product is CoupangAffiliateProduct => Boolean(product))
+      .slice(0, 3);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('쿠팡 딥링크 fallback API 호출 중 에러 발생:', error);
+    }
+    return [];
+  }
+}
+
+export async function fetchCoupangProducts(query: string): Promise<CoupangAffiliateProduct[]> {
+  if (!query || query.trim().length === 0) {
+    return [];
+  }
+
+  const url = `${API_BASE_URL}/trend/affiliate/coupang/products`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getTrendApiHeaders(),
+      body: JSON.stringify({ query: query.trim() }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return fetchCoupangDeeplinkFallback(query);
+      }
+
+      if (import.meta.env.DEV) {
+        const errorText = await response.text();
+        console.warn('쿠팡 상품 API 호출 실패:', response.status, errorText);
+      }
+      return [];
+    }
+
+    const data = await response.json();
+    const rows = extractProductRows(data);
+    const products = rows
+      .map(row => normalizeCoupangProduct(row, query.trim()))
+      .filter((product): product is CoupangAffiliateProduct => Boolean(product))
+      .slice(0, 3);
+
+    if (import.meta.env.DEV && rows.length > 0 && products.length === 0) {
+      console.warn('쿠팡 상품 API 응답은 받았지만 표시 가능한 상품 필드를 찾지 못했습니다:', data);
+    }
+
+    if (import.meta.env.DEV && rows.length === 0) {
+      console.warn('쿠팡 상품 API 응답에서 상품 배열을 찾지 못했습니다:', data);
+    }
+
+    return products;
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('쿠팡 상품 API 호출 중 에러 발생:', error);
+    }
+    return [];
   }
 }
 

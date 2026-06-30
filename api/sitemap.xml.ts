@@ -80,12 +80,11 @@ async function fetchTrendKeywordLocs(apiBase: string, apiKey?: string): Promise<
 
 export default async function handler(_req: any, res: any): Promise<void> {
   const config: SitemapRuntimeConfig = {
-    // 사이트맵 전용 변수가 있으면 최우선 사용, 없으면 기존 FE 환경 변수 fallback
     apiBase:
       process.env.SITEMAP_API_BASE_URL ||
       process.env.VITE_API_BASE_URL ||
       DEFAULT_API_BASE,
-    apiKey: process.env.SITEMAP_API_KEY || process.env.VITE_ADMIN_API_KEY,
+    apiKey: process.env.SITEMAP_API_KEY,
   };
   const nowIso = new Date().toISOString();
 

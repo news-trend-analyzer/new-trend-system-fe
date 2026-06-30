@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { TrendItem, SearchResult, SearchResultResponse } from '@/types';
-import { fetchKeywordInsight, searchArticlesByKeyword, type KeywordInsightResponse } from '@/utils/api';
+import {
+  fetchCoupangProducts,
+  fetchKeywordInsight,
+  searchArticlesByKeyword,
+  type CoupangAffiliateProduct,
+  type KeywordInsightCommerceHint,
+  type KeywordInsightResponse,
+} from '@/utils/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -71,6 +78,18 @@ function buildBriefingQuestions(briefing: NonNullable<KeywordInsightResponse['br
       answer: question.answer,
       count: question.interestCount,
     }));
+}
+
+function buildCommerceHints(briefing: NonNullable<KeywordInsightResponse['briefing']>): KeywordInsightCommerceHint[] {
+  return (briefing.commerceHints || [])
+    .filter(hint => hint.label && hint.query)
+    .slice(0, 3);
+}
+
+function normalizeCommerceHints(hints: KeywordInsightCommerceHint[] | undefined): KeywordInsightCommerceHint[] {
+  return (hints || [])
+    .filter(hint => hint.label && hint.query)
+    .slice(0, 3);
 }
 
 const SearchResultItem = memo(({ result }: { result: SearchResult }) => {
@@ -210,11 +229,20 @@ export default function TrendDetailPanel({
   const [insightKeyword, setInsightKeyword] = useState('');
   const [isInsightLoading, setIsInsightLoading] = useState(false);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState<number | null>(0);
+  const [commerceProductsByQuery, setCommerceProductsByQuery] = useState<Record<string, CoupangAffiliateProduct[]>>({});
+  const [commerceLoadingQueries, setCommerceLoadingQueries] = useState<Set<string>>(new Set());
   const pageSize = 5;
   const totalPages = Math.ceil(searchResponse.total / pageSize);
   const isRealtimeItem = item?.trendType === 'realtime';
   /** item 전체가 아니라 id로 의존 — 클릭 직후·URL 동기화 등으로 같은 키워드 객체가 새 참조로 들어와도 API 중복 호출 방지 */
   const itemKeywordId = item?.id != null ? String(item.id) : null;
+  const commerceHints = useMemo(() => {
+    const rootHints = normalizeCommerceHints(keywordInsightData?.commerceHints);
+    if (rootHints.length > 0) return rootHints;
+    const briefing = keywordInsightData?.briefing;
+    return briefing ? buildCommerceHints(briefing) : [];
+  }, [keywordInsightData]);
+
   const apiBriefing = useMemo(() => {
     const briefing = keywordInsightData?.briefing;
     if (!briefing) return null;
@@ -233,6 +261,123 @@ export default function TrendDetailPanel({
       questions: buildBriefingQuestions(briefing),
     };
   }, [keywordInsightData]);
+
+  useEffect(() => {
+    if (commerceHints.length === 0) {
+      setCommerceProductsByQuery({});
+      setCommerceLoadingQueries(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    const queries = Array.from(new Set(commerceHints.map(hint => hint.query).filter(Boolean)));
+    setCommerceLoadingQueries(new Set(queries));
+    setCommerceProductsByQuery({});
+
+    void Promise.all(
+      queries.map(async (query) => {
+        const products = await fetchCoupangProducts(query);
+        return { query, products };
+      })
+    ).then(results => {
+      if (cancelled) return;
+      const next: Record<string, CoupangAffiliateProduct[]> = {};
+      for (const result of results) {
+        next[result.query] = result.products;
+      }
+      setCommerceProductsByQuery(next);
+      setCommerceLoadingQueries(new Set());
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [commerceHints]);
+
+  const commerceHintSection = commerceHints.length > 0 ? (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+      <div className="mb-3">
+        <p className="flex items-center gap-1.5 text-sm font-extrabold text-slate-900">
+          <i className="ri-shopping-bag-3-line text-base text-teal-600"></i>
+          관련 자료 보기
+        </p>
+        <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
+          AI가 이 이슈와 함께 확인할 만한 검색어를 골랐습니다.
+        </p>
+      </div>
+      <div className="grid gap-2">
+        {commerceHints.map((hint) => {
+          const products = commerceProductsByQuery[hint.query] || [];
+          const isHintLoading = commerceLoadingQueries.has(hint.query);
+          return (
+            <div
+              key={`${hint.label}-${hint.query}`}
+              className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3"
+            >
+              <div className="mb-2">
+                <p className="truncate text-sm font-extrabold text-slate-900">
+                  {hint.label}
+                </p>
+              </div>
+
+              {isHintLoading ? (
+                <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-3">
+                  <div className="h-14 w-14 shrink-0 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3 w-3/4 animate-pulse rounded bg-slate-100" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-slate-100" />
+                  </div>
+                </div>
+              ) : products.length > 0 ? (
+                <div className="grid gap-2">
+                  {products.slice(0, 2).map((product, index) => (
+                    <a
+                      key={`${product.url}-${index}`}
+                      href={product.url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 transition-colors hover:bg-teal-50"
+                    >
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          className="h-14 w-14 shrink-0 rounded-lg border border-slate-100 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50">
+                          <i className="ri-shopping-bag-3-line text-xl text-slate-300" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-bold leading-5 text-slate-900">
+                          {product.name}
+                        </p>
+                        {(product.priceText || product.price) && (
+                          <p className="mt-1 text-xs font-black text-teal-700">
+                            {product.priceText || `${product.price?.toLocaleString()}원`}
+                          </p>
+                        )}
+                      </div>
+                      <i className="ri-external-link-line shrink-0 text-base text-slate-400" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-white px-3 py-3 text-xs font-medium text-slate-400">
+                  표시할 관련 상품이 없습니다.
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-[11px] leading-4 text-slate-400">
+        쿠팡 파트너스 활동의 일환으로 수수료를 제공받을 수 있습니다.
+      </p>
+    </div>
+  ) : null;
 
   useEffect(() => {
     if (itemKeywordId) {
@@ -577,46 +722,60 @@ export default function TrendDetailPanel({
                       </div>
                     </div>
                   )}
+
+                  {commerceHintSection}
                 </div>
               )}
               {!apiBriefing && keywordInsight ? (
-                <div className="text-slate-700 leading-7 text-[15px] break-words">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc pl-5 mb-3 last:mb-0 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 last:mb-0 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li>{children}</li>,
-                      strong: ({ children }) => <strong className="font-bold text-slate-800">{children}</strong>,
-                      em: ({ children }) => <em className="italic">{children}</em>,
-                      a: ({ href, children }) => (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-teal-700 underline underline-offset-2 hover:text-teal-800"
-                        >
-                          {children}
-                        </a>
-                      ),
-                      code: ({ children }) => (
-                        <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[13px]">{children}</code>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-teal-200 pl-3 text-slate-600 mb-3 last:mb-0">
-                          {children}
-                        </blockquote>
-                      ),
-                    }}
-                  >
-                    {normalizeMarkdown(keywordInsight)}
-                  </ReactMarkdown>
+                <div className="space-y-4">
+                  <div className="text-slate-700 leading-7 text-[15px] break-words">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-5 mb-3 last:mb-0 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 last:mb-0 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li>{children}</li>,
+                        strong: ({ children }) => <strong className="font-bold text-slate-800">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        a: ({ href, children }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-teal-700 underline underline-offset-2 hover:text-teal-800"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({ children }) => (
+                          <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[13px]">{children}</code>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-teal-200 pl-3 text-slate-600 mb-3 last:mb-0">
+                            {children}
+                          </blockquote>
+                        ),
+                      }}
+                    >
+                      {normalizeMarkdown(keywordInsight)}
+                    </ReactMarkdown>
+                  </div>
+                  {commerceHintSection}
                 </div>
               ) : !apiBriefing ? (
-                <p className="text-slate-500 leading-relaxed text-sm">
-                  AI 요약 정보가 없습니다.
-                </p>
+                commerceHintSection ? (
+                  <div className="space-y-4">
+                    <p className="text-slate-500 leading-relaxed text-sm">
+                      AI 요약 정보가 없습니다.
+                    </p>
+                    {commerceHintSection}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 leading-relaxed text-sm">
+                    AI 요약 정보가 없습니다.
+                  </p>
+                )
               ) : null}
             </div>
           )}
