@@ -257,6 +257,7 @@ export default function TrendListSplit({
           selectedItem={selectedItem}
           onSelect={(item) => handleItemSelect({ ...item, trendType: activeTab })}
           showDesktop={!!selectedItem}
+          showMobile={!!selectedItem}
         />
       )}
     </main>

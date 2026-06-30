@@ -613,11 +613,11 @@ export default function TrendDetailPanel({
                       <div className="rounded-xl bg-slate-50 px-4 py-1">
                         {apiBriefing.whySteps.map((step, index, steps) => (
                           <div key={`${step}-${index}`}>
-                            <div className="flex items-center gap-3 py-3">
+                            <div className="flex items-start gap-3 py-3">
                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-teal-700 shadow-sm ring-1 ring-slate-200">
                                 {index + 1}
                               </span>
-                              <p className="line-clamp-1 text-base font-extrabold leading-6 text-slate-900">
+                              <p className="min-w-0 flex-1 break-words text-sm font-extrabold leading-6 text-slate-900 sm:text-base">
                                 {step}
                               </p>
                             </div>

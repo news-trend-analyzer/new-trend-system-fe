@@ -6,6 +6,7 @@ interface BriefingFloatingWidgetProps {
   selectedItem: TrendItemType | null;
   onSelect: (item: TrendItemType) => void;
   showDesktop?: boolean;
+  showMobile?: boolean;
 }
 
 export default function BriefingFloatingWidget({
@@ -14,6 +15,7 @@ export default function BriefingFloatingWidget({
   selectedItem,
   onSelect,
   showDesktop = true,
+  showMobile = true,
 }: BriefingFloatingWidgetProps) {
   if (items.length === 0) return null;
 
@@ -91,7 +93,7 @@ export default function BriefingFloatingWidget({
         </button>
       </aside>
 
-      <div className="fixed inset-x-3 bottom-5 z-40 rounded-2xl border border-teal-100 bg-white/95 p-3 shadow-2xl shadow-slate-900/15 backdrop-blur lg:hidden">
+      <div className={`fixed inset-x-3 bottom-5 z-40 rounded-2xl border border-teal-100 bg-white/95 p-3 shadow-2xl shadow-slate-900/15 backdrop-blur lg:hidden ${showMobile ? 'block' : 'hidden'}`}>
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center justify-between gap-2">
