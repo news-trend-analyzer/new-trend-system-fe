@@ -162,7 +162,7 @@ export default function TrendListSplit({
       {!error && (
         <div className={`grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8 mt-3 sm:mt-4 ${!selectedItem ? 'items-start' : ''}`}>
           {/* 좌측: 탭 + 랭킹 리스트 */}
-          <div className="lg:col-span-1">
+          <div className={`lg:col-span-1 ${!selectedItem ? 'order-2 lg:order-none' : ''}`}>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden">
               {/* 탭 버튼 */}
               <div className="flex border-b border-slate-200">
@@ -230,12 +230,14 @@ export default function TrendListSplit({
             ref={detailPanelRef}
             className={`lg:sticky lg:top-20 lg:col-span-2 lg:h-[calc(100dvh-6.5rem)] w-full scroll-mt-[5.25rem] lg:scroll-mt-0 ${
               selectedItem ? 'min-h-[400px]' : ''
-            }`}
+            } ${!selectedItem ? 'order-1 lg:order-none' : ''}`}
           >
             <TrendDetailPanel
               item={selectedItem}
               nextItems={nextItems}
               onNextItemClick={(item) => handleItemSelect({ ...item, trendType: activeTab })}
+              briefingItems={briefingItems}
+              onBriefingStart={(item) => handleItemSelect({ ...item, trendType: activeTab })}
               briefingProgress={{
                 completed: completedBriefingCount,
                 total: briefingItems.length,
@@ -254,6 +256,7 @@ export default function TrendListSplit({
           completedIds={completedBriefingIds}
           selectedItem={selectedItem}
           onSelect={(item) => handleItemSelect({ ...item, trendType: activeTab })}
+          showDesktop={!!selectedItem}
         />
       )}
     </main>

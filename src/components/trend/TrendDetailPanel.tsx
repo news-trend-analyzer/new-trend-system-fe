@@ -14,6 +14,8 @@ interface TrendDetailPanelProps {
   item: TrendItem | null;
   nextItems?: TrendItem[];
   onNextItemClick?: (item: TrendItem) => void;
+  briefingItems?: TrendItem[];
+  onBriefingStart?: (item: TrendItem) => void;
   briefingProgress?: {
     completed: number;
     total: number;
@@ -189,6 +191,8 @@ export default function TrendDetailPanel({
   item,
   nextItems = [],
   onNextItemClick,
+  briefingItems = [],
+  onBriefingStart,
   briefingProgress,
   deepLinkLoading = false,
   deepLinkNotFound = false,
@@ -349,30 +353,52 @@ export default function TrendDetailPanel({
     }
     return (
       <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-300/20 overflow-hidden min-h-[400px] lg:h-full">
-        <div className="flex flex-col items-center justify-start pt-8 pb-10 px-10 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-teal-50 flex items-center justify-center mb-6">
-            <i className="ri-bar-chart-box-line text-4xl text-teal-500"></i>
-          </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">키워드를 선택해보세요</h3>
-          <p className="text-slate-500 text-sm max-w-xs mb-6 leading-relaxed">
-            왼쪽 랭킹에서 관심 있는 키워드를 클릭하면<br />
-            키워드 분석과 관련 뉴스가 여기에 표시됩니다.
-          </p>
-          <div className="text-left w-full max-w-sm space-y-3">
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50">
-              <i className="ri-calendar-check-line text-teal-500 text-xl mt-0.5 shrink-0"></i>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">하루 트렌드</p>
-                <p className="text-xs text-slate-500">최근 24시간 기준 인기 키워드</p>
-              </div>
+        <div className="flex flex-1 flex-col justify-center px-6 py-8 sm:px-10">
+          <div className="mx-auto w-full max-w-xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1.5 text-xs font-black text-teal-700">
+              <i className="ri-sparkling-2-line text-sm" />
+              AI 브리핑
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50">
-              <i className="ri-flashlight-line text-amber-500 text-xl mt-0.5 shrink-0"></i>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">실시간 트렌드</p>
-                <p className="text-xs text-slate-500">가장 최근 구간 기준 급상승 키워드</p>
+            <h3 className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+              오늘 30초 브리핑
+            </h3>
+            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500 sm:text-base">
+              오늘 가장 많이 검색된 이슈 3개를<br className="hidden sm:block" />
+              AI가 핵심만 정리했습니다.
+            </p>
+
+            {briefingItems.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="grid gap-2">
+                  {briefingItems.slice(0, 3).map((briefingItem, index) => (
+                    <button
+                      key={`empty-briefing-${briefingItem.id}`}
+                      type="button"
+                      onClick={() => onBriefingStart?.(briefingItem)}
+                      className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 text-left transition-colors hover:bg-teal-50"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-50 text-sm font-black text-teal-700">
+                        {index + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-base font-extrabold text-slate-900">
+                        {briefingItem.keyword}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {briefingItems[0] && (
+              <button
+                type="button"
+                onClick={() => onBriefingStart?.(briefingItems[0])}
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-slate-800 sm:w-auto"
+              >
+                브리핑 시작
+                <i className="ri-arrow-right-line text-lg" />
+              </button>
+            )}
           </div>
         </div>
       </div>
